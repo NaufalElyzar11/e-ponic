@@ -163,7 +163,6 @@ class _FarmerHomeContent extends StatelessWidget {
           }
         }
 
-        // Fallback jika tanggal tidak ada
         if (totalBibit > 0 && tanggalTanamAwal == null) {
           tanggalTanamAwal = DateTime.now();
           isDateMissing = true;
@@ -201,7 +200,7 @@ class _FarmerHomeContent extends StatelessWidget {
                     ),
                     const SizedBox(height: 15),
                     const Text(
-                      'Daftar Jadwal',
+                      'Daftar Jadwal Hari Ini', // Ubah judul agar sesuai konteks
                       style:
                           TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
@@ -209,7 +208,7 @@ class _FarmerHomeContent extends StatelessWidget {
                       const Padding(
                         padding: EdgeInsets.only(top: 8.0),
                         child: Text(
-                          'Info: Tanggal tanam tidak ditemukan. Menampilkan jadwal simulasi dari hari ini.',
+                          'Info: Tanggal tanam tidak ditemukan. Simulasi jadwal hari ini.',
                           style: TextStyle(color: Colors.orange, fontSize: 12),
                         ),
                       ),
@@ -342,6 +341,14 @@ class _FarmerHomeContent extends StatelessWidget {
                                   calculateNextDate(intervalBersih, baseDate);
 
                               final List<PlantMaintenanceModel> schedules = [];
+                              
+                              // Helper untuk cek apakah tanggal jadwal == HARI INI
+                              bool isToday(DateTime date) {
+                                final now = DateTime.now();
+                                return date.year == now.year &&
+                                       date.month == now.month &&
+                                       date.day == now.day;
+                              }
 
                               void addSchedule({
                                 required String field,
@@ -349,6 +356,9 @@ class _FarmerHomeContent extends StatelessWidget {
                                 required String description,
                                 required DateTime date,
                               }) {
+                                // FILTER: Hanya tampilkan jika tanggal jadwal adalah HARI INI
+                                if (!isToday(date)) return;
+
                                 final key =
                                     '${field}_${DateFormat('yyyy-MM-dd').format(date.toLocal())}';
                                 final isDone = statusMap[key] ?? false;
@@ -420,25 +430,34 @@ class _FarmerHomeContent extends StatelessWidget {
                                   final panenDate = tglTanam
                                       .add(Duration(days: masaTanam));
                                   
-                                  // --- LOGIKA BARU: Hapus jika sudah lewat ---
-                                  final now = DateTime.now();
-                                  // Buat perbandingan tanggal saja (reset jam ke 00:00)
-                                  final today = DateTime(now.year, now.month, now.day);
-                                  final pDate = DateTime(panenDate.year, panenDate.month, panenDate.day);
-
-                                  // Jika panenDate < hari ini (kemarin atau sebelumnya), skip
-                                  if (pDate.isBefore(today)) {
-                                    continue;
-                                  }
+                                  // FILTER: Estimasi Panen juga hanya tampil jika hari ini adalah hari panen
+                                  if (!isToday(panenDate)) continue;
 
                                   addSchedule(
                                     field: 'estimasi_panen',
                                     title: 'Estimasi Panen',
                                     description:
-                                        'Perkiraan waktu panen berdasarkan masa tanam.',
+                                        'Waktunya panen berdasarkan masa tanam!',
                                     date: panenDate,
                                   );
                                 }
+                              }
+
+                              if (schedules.isEmpty) {
+                                return Container(
+                                  padding: const EdgeInsets.all(15),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[50],
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.grey.shade200)
+                                  ),
+                                  child: const Center(
+                                    child: Text(
+                                      'Tidak ada jadwal perawatan untuk hari ini.',
+                                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                                    ),
+                                  ),
+                                );
                               }
 
                               return ListView.builder(
