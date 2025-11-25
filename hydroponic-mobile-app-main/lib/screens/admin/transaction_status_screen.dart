@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
+// Tambahkan import package pdf & printing
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+
 import 'package:hydroponics_app/models/plant_model.dart';
 import 'package:hydroponics_app/models/plant_quantity_model.dart';
 import 'package:hydroponics_app/models/transaction_model.dart';
@@ -19,6 +24,8 @@ class TransactionStatusScreen extends StatefulWidget {
 }
 
 class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
+  bool _isExporting = false; // State loading untuk tombol ekspor
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -45,12 +52,12 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(15),
             child: StyledElevatedButton(
-              text: 'Ekspor Data',
-              onPressed: () {
-                // TODO: Implementasi ekspor data (misalnya ke CSV)
-              },
+              // Update logika tombol
+              text: _isExporting ? 'Memproses...' : 'Ekspor Data (PDF)',
+              onPressed: _isExporting ? null : _exportToPdf,
               foregroundColor: AppColors.primary,
               backgroundColor: Colors.white,
+              icon: _isExporting ? null : Icons.picture_as_pdf,
             ),
           ),
           Expanded(
@@ -148,8 +155,6 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
                             );
                           }
                         },
-                        // onAssign dan onEdit akan diisi ketika fitur
-                        // penugasan & edit transaksi sudah diimplementasi.
                       );
                     },
                     separatorBuilder: (BuildContext context, int index) {
@@ -190,5 +195,128 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
         ],
       ),
     );
+  }
+
+  // --- FUNGSI EKSPOR PDF ---
+  Future<void> _exportToPdf() async {
+    setState(() {
+      _isExporting = true;
+    });
+
+    try {
+      // 1. Ambil data transaksi
+      final snapshot = await FirebaseFirestore.instance
+          .collection('transaksi')
+          .orderBy('tanggal', descending: true)
+          .get();
+
+      final docs = snapshot.docs;
+
+      if (docs.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tidak ada data transaksi untuk diekspor.')),
+          );
+        }
+        return;
+      }
+
+      // 2. Buat PDF
+      final pdf = pw.Document();
+      final String dateNow = DateFormat('dd MMMM yyyy, HH:mm').format(DateTime.now());
+
+      // Header Tabel
+      final List<List<String>> tableData = [
+        ['Tgl', 'Pelanggan', 'Alamat', 'Pesanan', 'Total', 'Bayar', 'Kirim'],
+      ];
+
+      // Isi Tabel
+      for (var doc in docs) {
+        final data = doc.data();
+        
+        // Format Tanggal
+        final ts = data['tanggal'] as Timestamp?;
+        final dateStr = ts != null ? DateFormat('dd/MM/yy').format(ts.toDate()) : '-';
+
+        // Format Item (Misal: Selada(2), Pakcoy(1))
+        final items = (data['items'] as List<dynamic>? ?? []);
+        String itemsStr = items.map((i) {
+          return "${i['nama_tanaman']}(${i['jumlah']})";
+        }).join(', ');
+
+        // Format Status
+        final isPaid = (data['is_paid'] ?? false) ? 'Lunas' : 'Belum';
+        final isDeliver = (data['is_deliver'] ?? false) ? 'Dikirim' : 'Proses';
+        final total = (data['total_harga'] as num?)?.toStringAsFixed(0) ?? '0';
+
+        tableData.add([
+          dateStr,
+          (data['nama_pelanggan'] ?? '-').toString(),
+          (data['alamat'] ?? '-').toString(),
+          itemsStr,
+          'Rp $total',
+          isPaid,
+          isDeliver,
+        ]);
+      }
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4.landscape, // Landscape agar muat banyak kolom
+          margin: const pw.EdgeInsets.all(32),
+          build: (pw.Context context) {
+            return [
+              pw.Header(
+                level: 0,
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Laporan Transaksi', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+                    pw.Text(dateNow, style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey)),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 20),
+              pw.TableHelper.fromTextArray(
+                context: context,
+                data: tableData,
+                border: null,
+                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 10),
+                cellStyle: const pw.TextStyle(fontSize: 9), // Font lebih kecil untuk tabel padat
+                headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF014421)),
+                rowDecoration: const pw.BoxDecoration(
+                  border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5)),
+                ),
+                cellAlignments: {
+                  0: pw.Alignment.center,
+                  4: pw.Alignment.centerRight, // Total rata kanan
+                  5: pw.Alignment.center,
+                  6: pw.Alignment.center,
+                },
+                cellPadding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+              ),
+            ];
+          },
+        ),
+      );
+
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdf.save(),
+        name: 'Laporan_Transaksi_$dateNow',
+      );
+
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal ekspor: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExporting = false;
+        });
+      }
+    }
   }
 }

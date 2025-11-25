@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart'; // Pastikan intl di-import
+
+// Import package pdf & printing
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 import 'package:hydroponics_app/theme/app_colors.dart';
 import 'package:hydroponics_app/widgets/plant_harvest_card.dart';
@@ -14,6 +20,8 @@ class PlantStatusScreen extends StatefulWidget{
 }
 
 class _PlantStatusScreenState extends State<PlantStatusScreen> {
+  bool _isExporting = false; // State untuk loading
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -22,12 +30,12 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
         title: const Text('Status Tanaman', style: TextStyle(fontWeight: FontWeight.bold),),
         titleSpacing: 10,
         foregroundColor: Colors.white,
-        backgroundColor: Color.fromARGB(255, 1, 68, 33),
+        backgroundColor: const Color.fromARGB(255, 1, 68, 33),
         leading: IconButton(
           onPressed: () {
             Navigator.pop(context);
           },
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
         ),
       ),
       body: LayoutBuilder(builder: (BuildContext context, BoxConstraints constraints) {
@@ -39,14 +47,14 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
                 Container(
                   color: AppColors.primary,
                   width: double.infinity,
-                  padding: EdgeInsets.all(15),
+                  padding: const EdgeInsets.all(15),
                   child: StyledElevatedButton(
-                    text: 'Ekspor Data', 
-                    onPressed: () {
-                      
-                    },
+                    // Update logika tombol
+                    text: _isExporting ? 'Memproses...' : 'Ekspor Laporan (PDF)', 
+                    onPressed: _isExporting ? null : _exportToPdf,
                     foregroundColor: AppColors.primary,
                     backgroundColor: Colors.white,
+                    icon: _isExporting ? null : Icons.picture_as_pdf,
                   ),
                 ),
                 _buildReadyToHarvestSection(),
@@ -59,6 +67,7 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
     );
   }
 
+  // ... _buildReadyToHarvestSection ... (Tidak ada perubahan kode di widget ini)
   Widget _buildReadyToHarvestSection() {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance.collection('tanaman').snapshots(),
@@ -86,7 +95,6 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
                   children: docs.map((doc) {
                     final data = doc.data();
                     final nama = (data['nama_tanaman'] ?? '') as String;
-                    // hitung total tanam dan panen untuk tanaman ini
                     return FutureBuilder<Map<String, int>>(
                       future: _aggregateForPlant(doc.id),
                       builder: (context, aggSnap) {
@@ -114,8 +122,8 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
     );
   }
 
+  // ... _buildHistorySection ... (Tidak ada perubahan kode di widget ini)
   Widget _buildHistorySection(double width) {
-    // agregasi global per tanggal untuk 3 tanaman utama
     return Container(
       width: double.infinity,
       padding:
@@ -136,7 +144,6 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
                 ),
               ),
               const SizedBox(height: 7),
-              // Pertama, ambil daftar tanaman untuk memetakan id_tanaman -> nama
               FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 future: FirebaseFirestore.instance
                     .collection('tanaman')
@@ -182,7 +189,6 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
                           }
                           final panenDocs = panenSnap.data?.docs ?? [];
 
-                          // map tanggal -> (plantId -> tanam/panen)
                           final Map<String,
                                   Map<String, Map<String, int>>>
                               agg = {};
@@ -311,5 +317,167 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
 
     return {'tanam': tanam, 'panen': panen};
   }
-}
 
+  // --- FUNGSI EKSPOR PDF ---
+  Future<void> _exportToPdf() async {
+    setState(() => _isExporting = true);
+
+    try {
+      // 1. Fetch semua data yang dibutuhkan
+      final tanamanSnap = await FirebaseFirestore.instance.collection('tanaman').get();
+      final tanamSnap = await FirebaseFirestore.instance.collection('data_tanam').get();
+      final panenSnap = await FirebaseFirestore.instance.collection('data_panen').get();
+
+      if (tanamanSnap.docs.isEmpty) {
+        if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Data tanaman kosong')));
+        return;
+      }
+
+      // 2. Proses Data: Map ID Tanaman -> Nama
+      final Map<String, String> plantNames = {
+        for (var doc in tanamanSnap.docs) doc.id: (doc.data()['nama_tanaman'] ?? 'Tanaman')
+      };
+
+      // 3. Proses Data: Ringkasan Siap Panen (Total Tanam - Total Panen)
+      final Map<String, Map<String, int>> summaryData = {};
+      // Inisialisasi
+      for(var id in plantNames.keys) {
+        summaryData[id] = {'tanam': 0, 'panen': 0};
+      }
+      // Hitung Total Tanam
+      for (var doc in tanamSnap.docs) {
+        final pid = doc.data()['id_tanaman'] as String?;
+        final qty = doc.data()['jumlah_tanam'] as int? ?? 0;
+        if(pid != null && summaryData.containsKey(pid)) {
+          summaryData[pid]!['tanam'] = (summaryData[pid]!['tanam'] ?? 0) + qty;
+        }
+      }
+      // Hitung Total Panen
+      for (var doc in panenSnap.docs) {
+        final pid = doc.data()['id_tanaman'] as String?; // Field di data_panen
+        // Catatan: Di export JSON Anda, data_panen tidak punya 'id_tanaman', melainkan 'id_petani'. 
+        // Namun di fitur "Ready to Harvest" section Anda melakukan query: where('id_tanaman', isEqualTo: plantId). 
+        // Ini berarti seharusnya ada field 'id_tanaman' di 'data_panen' agar query itu bekerja. 
+        // Jika data Anda tidak konsisten, logika ini mungkin perlu disesuaikan.
+        // Kita asumsikan field 'id_tanaman' ada atau kita ambil via petani jika perlu.
+        // Untuk keamanan, kita skip jika null.
+        final qty = doc.data()['jumlah_panen'] as int? ?? 0;
+        
+        if(pid != null && summaryData.containsKey(pid)) {
+          summaryData[pid]!['panen'] = (summaryData[pid]!['panen'] ?? 0) + qty;
+        }
+      }
+
+      // Siapkan Tabel Ringkasan untuk PDF
+      final List<List<String>> summaryTable = [['Tanaman', 'Total Tanam', 'Total Panen', 'Siap Panen (Sisa)']];
+      summaryData.forEach((id, val) {
+        final name = plantNames[id] ?? '-';
+        final t = val['tanam']!;
+        final p = val['panen']!;
+        final sisa = t - p;
+        summaryTable.add([name, '$t', '$p', '$sisa']);
+      });
+
+      // 4. Proses Data: Riwayat Aktivitas Kronologis
+      // Kita gabungkan data tanam dan panen jadi satu list event
+      final List<Map<String, dynamic>> historyList = [];
+
+      for (var doc in tanamSnap.docs) {
+        final ts = doc.data()['tanggal_tanam'] as Timestamp?;
+        if (ts != null) {
+          historyList.add({
+            'date': ts.toDate(),
+            'type': 'Tanam',
+            'plant': plantNames[doc.data()['id_tanaman']] ?? '-',
+            'qty': doc.data()['jumlah_tanam'] ?? 0,
+          });
+        }
+      }
+      for (var doc in panenSnap.docs) {
+        final ts = doc.data()['tanggal_panen'] as Timestamp?;
+        // Asumsi ada field id_tanaman di data_panen, jika tidak ada, nama tanaman mungkin tidak diketahui
+        final pid = doc.data()['id_tanaman'];
+        if (ts != null) {
+          historyList.add({
+            'date': ts.toDate(),
+            'type': 'Panen',
+            'plant': pid != null ? (plantNames[pid] ?? '-') : 'Panen (Umum)',
+            'qty': doc.data()['jumlah_panen'] ?? 0,
+          });
+        }
+      }
+
+      // Sort descending (terbaru diatas)
+      historyList.sort((a, b) => (b['date'] as DateTime).compareTo(a['date'] as DateTime));
+
+      final List<List<String>> historyTable = [['Tanggal', 'Aktivitas', 'Tanaman', 'Jumlah']];
+      for (var item in historyList) {
+        final dt = DateFormat('dd MMM yyyy').format(item['date']);
+        historyTable.add([
+          dt,
+          item['type'],
+          item['plant'],
+          '${item['qty']}',
+        ]);
+      }
+
+      // 5. Generate PDF
+      final pdf = pw.Document();
+      final dateNow = DateFormat('dd MMMM yyyy').format(DateTime.now());
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          build: (pw.Context context) {
+            return [
+              pw.Header(level: 0, child: pw.Text('Laporan Status Tanaman', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold))),
+              pw.Text('Dicetak pada: $dateNow', style: const pw.TextStyle(color: PdfColors.grey)),
+              pw.SizedBox(height: 20),
+              
+              pw.Text('Ringkasan Stok (Siap Panen)', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 5),
+              pw.TableHelper.fromTextArray(
+                context: context,
+                data: summaryTable,
+                headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF014421)),
+                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                rowDecoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300))),
+                cellAlignment: pw.Alignment.center,
+              ),
+
+              pw.SizedBox(height: 20),
+              pw.Text('Riwayat Aktivitas (Tanam & Panen)', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 5),
+              pw.TableHelper.fromTextArray(
+                context: context,
+                data: historyTable,
+                headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF014421)),
+                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                rowDecoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300))),
+                cellAlignments: {
+                  0: pw.Alignment.centerLeft,
+                  1: pw.Alignment.center,
+                  2: pw.Alignment.centerLeft,
+                  3: pw.Alignment.center,
+                }
+              ),
+            ];
+          },
+        ),
+      );
+
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdf.save(),
+        name: 'Laporan_Tanaman_$dateNow',
+      );
+
+    } catch (e) {
+      if(mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error PDF: $e')));
+      }
+    } finally {
+      if(mounted) setState(() => _isExporting = false);
+    }
+  }
+}
