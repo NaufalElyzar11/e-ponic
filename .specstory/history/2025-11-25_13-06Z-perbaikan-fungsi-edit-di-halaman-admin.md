@@ -8058,3 +8058,952 @@ Sistem notifikasi siap digunakan. Setiap role akan melihat notifikasi yang relev
 
 ---
 
+_**User (2025-11-25 13:46Z)**_
+
+Sekarang, saya ingin menambahkan superadmin untuk dosen saya selaku tester aplikasi.. Intinya dia bisa mengakses semua role. Tolong buatkan
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Memeriksa struktur routing dan autentikasi untuk menambahkan role superadmin yang dapat mengakses semua role:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: hydroponic-mobile-app-main/lib/main.dart</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="codebase_search">
+<details>
+                <summary>Tool use: **codebase_search** • Searched codebase "How does the app determine which home screen to show based on user role?" • **15** results</summary>
+            
+| File | Lines |
+|------|-------|
+| `hydroponic-mobile-app-main/lib/main.dart` | L65-115 |
+| `hydroponic-mobile-app-main/lib/main.dart` | L32-72 |
+| `hydroponic-mobile-app-main/lib/main.dart` | L111-134 |
+| `hydroponic-mobile-app-main/lib/screens/farmer/farmer_home_screen.dart` | L58 |
+| `hydroponic-mobile-app-main/lib/screens/logistic/logistic_home_screen.dart` | L51 |
+| `hydroponic-mobile-app-main/lib/screens/farmer/farmer_home_screen.dart` | L52-109 |
+| `hydroponic-mobile-app-main/lib/screens/courier/courier_home_screen.dart` | L34 |
+| `hydroponic-mobile-app-main/lib/widgets/home_app_bar.dart` | L46 |
+| `hydroponic-mobile-app-main/lib/screens/profile_screen.dart` | L57 |
+| `hydroponic-mobile-app-main/lib/screens/admin/admin_home_screen.dart` | L33 |
+| `hydroponic-mobile-app-main/lib/main.dart` | L36 |
+| `hydroponic-mobile-app-main/lib/screens/courier/courier_home_screen.dart` | L30-76 |
+| `hydroponic-mobile-app-main/lib/screens/login_screen.dart` | L120-193 |
+| `hydroponic-mobile-app-main/lib/models/user_model.dart` | L14 |
+| `hydroponic-mobile-app-main/lib/screens/select_role_screen.dart` | L23-67 |
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="grep">
+<details>
+<summary>Tool use: **grep** • Grep for "posisi|role|Admin|Petani|Staf Logistik|Kurir" in "hydroponic-mobile-app-main/lib/main.dart" • 13 matches</summary>
+
+Output mode: content
+
+
+| File | Content | Line |
+|------|------|------|
+| `hydroponic-mobile-app-main/lib/main.dart` | `import 'package:hydroponics_app/screens/select_role_screen.dart';` | L22 |
+| `hydroponic-mobile-app-main/lib/main.dart` | `'/select_role': (context) => const SelectRoleScreen(),` | L52 |
+| `hydroponic-mobile-app-main/lib/main.dart` | `'/admin_navigation': (context) => const AdminNavigation(),` | L59 |
+| `hydroponic-mobile-app-main/lib/main.dart` | `/// jika user masih login maka langsung diarahkan ke halaman sesuai role` | L72 |
+| `hydroponic-mobile-app-main/lib/main.dart` | `// Sudah login -> tentukan halaman awal berdasarkan role di Firestore` | L95 |
+| `hydroponic-mobile-app-main/lib/main.dart` | `// agar tidak bisa memilih role sembarang.` | L110 |
+| `hydroponic-mobile-app-main/lib/main.dart` | `final posisi = (data['posisi'] ?? '') as String;` | L116 |
+| `hydroponic-mobile-app-main/lib/main.dart` | `switch (posisi) \{` | L118 |
+| `hydroponic-mobile-app-main/lib/main.dart` | `case 'Petani':` | L119 |
+| `hydroponic-mobile-app-main/lib/main.dart` | `case 'Kurir':` | L121 |
+| `hydroponic-mobile-app-main/lib/main.dart` | `case 'Staf Logistik':` | L123 |
+| `hydroponic-mobile-app-main/lib/main.dart` | `case 'Admin':` | L125 |
+| `hydroponic-mobile-app-main/lib/main.dart` | `return const AdminNavigation();` | L126 |
+
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Membuat halaman superadmin yang dapat mengakses semua role. Membuat navigation khusus dengan tab untuk semua role:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: hydroponic-mobile-app-main/lib/screens/admin/admin_navigation.dart</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: hydroponic-mobile-app-main/lib/screens/farmer/farmer_navigation.dart</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: hydroponic-mobile-app-main/lib/screens/logistic/logistic_navigation.dart</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: hydroponic-mobile-app-main/lib/screens/courier/courier_navigation.dart</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Membuat halaman superadmin dengan tab untuk semua role:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="write">
+
+<details><summary>Tool use: **code_edit** • Edit file: hydroponic-mobile-app-main/lib/screens/superadmin/superadmin_navigation.dart</summary>
+
+**Chunk 1**
+Lines added: 198, lines removed: 1
+
+```diff
+@@ -1,1 +1,198 @@
+- 
++ import &#39;package:flutter/material.dart&#39;;
++ import &#39;package:flutter/services.dart&#39;;
++ import &#39;package:hydroponics_app/screens/admin/admin_home_screen.dart&#39;;
++ import &#39;package:hydroponics_app/screens/admin/admin_status_screen.dart&#39;;
++ import &#39;package:hydroponics_app/screens/farmer/farmer_home_screen.dart&#39;;
++ import &#39;package:hydroponics_app/screens/farmer/farmer_history_screen.dart&#39;;
++ import &#39;package:hydroponics_app/screens/farmer/farmer_harvest_screen.dart&#39;;
++ import &#39;package:hydroponics_app/screens/logistic/logistic_home_screen.dart&#39;;
++ import &#39;package:hydroponics_app/screens/logistic/logistic_delivery_status_screen.dart&#39;;
++ import &#39;package:hydroponics_app/screens/courier/courier_home_screen.dart&#39;;
++ import &#39;package:hydroponics_app/screens/profile_screen.dart&#39;;
++ import &#39;package:hydroponics_app/theme/app_colors.dart&#39;;
++ 
++ class SuperAdminNavigation extends StatefulWidget {
++   const SuperAdminNavigation({super.key});
++ 
++   @override
++   State&lt;SuperAdminNavigation&gt; createState() =&gt; _SuperAdminNavigationState();
++ }
++ 
++ class _SuperAdminNavigationState extends State&lt;SuperAdminNavigation&gt;
++     with SingleTickerProviderStateMixin {
++   late TabController _tabController;
++   int _selectedBottomIndex = 0;
++ 
++   @override
++   void initState() {
++     super.initState();
++     _tabController = TabController(length: 4, vsync: this);
++   }
++ 
++   @override
++   void dispose() {
++     _tabController.dispose();
++     super.dispose();
++   }
++ 
++   Widget _buildRoleView(int roleIndex) {
++     switch (roleIndex) {
++       case 0: // Admin
++         return _selectedBottomIndex == 0
++             ? const AdminHomeScreen()
++             : _selectedBottomIndex == 1
++                 ? const AdminStatusScreen()
++                 : const ProfileScreen();
++       case 1: // Petani
++         return _selectedBottomIndex == 0
++             ? const FarmerHomeScreen()
++             : _selectedBottomIndex == 1
++                 ? const FarmerHistoryScreen()
++                 : _selectedBottomIndex == 2
++                     ? const FarmerHarvestScreen()
++                     : const ProfileScreen();
++       case 2: // Staf Logistik
++         return _selectedBottomIndex == 0
++             ? const LogisticHomeScreen()
++             : _selectedBottomIndex == 1
++                 ? const LogisticDeliveryStatusScreen()
++                 : const ProfileScreen();
++       case 3: // Kurir
++         return _selectedBottomIndex == 0
++             ? const CourierHomeScreen()
++             : const ProfileScreen();
++       default:
++         return const SizedBox();
++     }
++   }
++ 
++   List&lt;BottomNavigationBarItem&gt; _getBottomNavItems(int roleIndex) {
++     switch (roleIndex) {
++       case 0: // Admin
++         return const [
++           BottomNavigationBarItem(icon: Icon(Icons.home), label: &#39;Beranda&#39;),
++           BottomNavigationBarItem(
++               icon: Icon(Icons.assignment), label: &#39;Cek Status&#39;),
++           BottomNavigationBarItem(icon: Icon(Icons.person), label: &#39;Profil&#39;),
++         ];
++       case 1: // Petani
++         return const [
++           BottomNavigationBarItem(icon: Icon(Icons.home), label: &#39;Beranda&#39;),
++           BottomNavigationBarItem(
++               icon: Icon(Icons.history), label: &#39;Riwayat Tanam&#39;),
++           BottomNavigationBarItem(
++               icon: Icon(Icons.list), label: &#39;Tugas Panen&#39;),
++           BottomNavigationBarItem(icon: Icon(Icons.person), label: &#39;Profil&#39;),
++         ];
++       case 2: // Staf Logistik
++         return const [
++           BottomNavigationBarItem(icon: Icon(Icons.home), label: &#39;Beranda&#39;),
++           BottomNavigationBarItem(
++               icon: Icon(Icons.assignment), label: &#39;Status Pengiriman&#39;),
++           BottomNavigationBarItem(icon: Icon(Icons.person), label: &#39;Profil&#39;),
++         ];
++       case 3: // Kurir
++         return const [
++           BottomNavigationBarItem(icon: Icon(Icons.home), label: &#39;Beranda&#39;),
++           BottomNavigationBarItem(icon: Icon(Icons.person), label: &#39;Profil&#39;),
++         ];
++       default:
++         return [];
++     }
++   }
++ 
++   int _getMaxBottomIndex(int roleIndex) {
++     switch (roleIndex) {
++       case 0: // Admin
++         return 2;
++       case 1: // Petani
++         return 3;
++       case 2: // Staf Logistik
++         return 2;
++       case 3: // Kurir
++         return 1;
++       default:
++         return 0;
++     }
++   }
++ 
++   @override
++   Widget build(BuildContext context) {
++     final currentRoleIndex = _tabController.index;
++ 
++     return AnnotatedRegion&lt;SystemUiOverlayStyle&gt;(
++       value: const SystemUiOverlayStyle(
++         statusBarColor: Colors.transparent,
++         statusBarIconBrightness: Brightness.light,
++         systemNavigationBarColor: Color.fromARGB(255, 231, 255, 237),
++         systemNavigationBarIconBrightness: Brightness.dark,
++       ),
++       child: Scaffold(
++         appBar: AppBar(
++           title: const Text(
++             &#39;Super Admin&#39;,
++             style: TextStyle(fontWeight: FontWeight.bold),
++           ),
++           backgroundColor: AppColors.primary,
++           foregroundColor: Colors.white,
++           bottom: TabBar(
++             controller: _tabController,
++             indicatorColor: Colors.white,
++             labelColor: Colors.white,
++             unselectedLabelColor: Colors.white70,
++             onTap: (index) {
++               setState(() {
++                 _selectedBottomIndex = 0; // Reset bottom nav saat ganti role
++               });
++             },
++             tabs: const [
++               Tab(
++                 icon: Icon(Icons.admin_panel_settings),
++                 text: &#39;Admin&#39;,
++               ),
++               Tab(
++                 icon: Icon(Icons.eco),
++                 text: &#39;Petani&#39;,
++               ),
++               Tab(
++                 icon: Icon(Icons.local_shipping),
++                 text: &#39;Logistik&#39;,
++               ),
++               Tab(
++                 icon: Icon(Icons.delivery_dining),
++                 text: &#39;Kurir&#39;,
++               ),
++             ],
++           ),
++         ),
++         body: TabBarView(
++           controller: _tabController,
++           children: [
++             _buildRoleView(0), // Admin
++             _buildRoleView(1), // Petani
++             _buildRoleView(2), // Staf Logistik
++             _buildRoleView(3), // Kurir
++           ],
++         ),
++         bottomNavigationBar: _getMaxBottomIndex(currentRoleIndex) &gt; 0
++             ? BottomNavigationBar(
++                 items: _getBottomNavItems(currentRoleIndex),
++                 type: BottomNavigationBarType.fixed,
++                 selectedItemColor: AppColors.primary,
++                 unselectedItemColor: Colors.grey,
++                 backgroundColor: const Color.fromARGB(255, 231, 255, 237),
++                 currentIndex: _selectedBottomIndex &gt; _getMaxBottomIndex(currentRoleIndex)
++                     ? 0
++                     : _selectedBottomIndex,
++                 onTap: (index) {
++                   setState(() {
++                     _selectedBottomIndex = index;
++                   });
++                 },
++               )
++             : null,
++       ),
++     );
++   }
++ }
++ 
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **code_edit** • Edit file: hydroponic-mobile-app-main/lib/main.dart</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -21,4 +21,5 @@
+  import &#39;package:hydroponics_app/screens/register_screen.dart&#39;;
+  import &#39;package:hydroponics_app/screens/select_role_screen.dart&#39;;
++ import &#39;package:hydroponics_app/screens/superadmin/superadmin_navigation.dart&#39;;
+  import &#39;package:hydroponics_app/services/alarm_service.dart&#39;;
+  import &#39;firebase_options.dart&#39;;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **code_edit** • Edit file: hydroponic-mobile-app-main/lib/main.dart</summary>
+
+**Chunk 1**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -65,4 +65,5 @@
+          &#39;/logistic_navigation&#39;: (context) =&gt; const LogisticNavigation(),
+          &#39;/logistic_assignment_detail&#39;: (context) =&gt; const LogisticAssignmentDetailScreen(),
++         &#39;/superadmin_navigation&#39;: (context) =&gt; const SuperAdminNavigation(),
+        },
+      );
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **code_edit** • Edit file: hydroponic-mobile-app-main/lib/main.dart</summary>
+
+**Chunk 1**
+Lines added: 2, lines removed: undefined
+
+```diff
+@@ -127,4 +127,6 @@
+                case &#39;Admin&#39;:
+                  return const AdminNavigation();
++               case &#39;Super Admin&#39;:
++                 return const SuperAdminNavigation();
+                default:
+                  return const LoginScreen();
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **code_edit** • Edit file: hydroponic-mobile-app-main/lib/services/notification_service.dart</summary>
+
+**Chunk 1**
+Lines added: 2, lines removed: undefined
+
+```diff
+@@ -37,4 +37,6 @@
+            case &#39;Kurir&#39;:
+              return await _getCourierNotifications(user.uid);
++           case &#39;Super Admin&#39;:
++             return await _getSuperAdminNotifications();
+            default:
+              return &lt;Map&lt;String, dynamic&gt;&gt;[];
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **code_edit** • Edit file: hydroponic-mobile-app-main/lib/services/notification_service.dart</summary>
+
+**Chunk 1**
+Lines added: 26, lines removed: undefined
+
+```diff
+@@ -373,4 +373,30 @@
+      return notifications.take(20).toList();
+    }
++ 
++   /// Notifikasi untuk Super Admin (gabungan semua notifikasi)
++   Future&lt;List&lt;Map&lt;String, dynamic&gt;&gt;&gt; _getSuperAdminNotifications() async {
++     final notifications = &lt;Map&lt;String, dynamic&gt;&gt;[];
++ 
++     // Gabungkan semua notifikasi dari semua role
++     final adminNotif = await _getAdminNotifications();
++     final logisticNotif = await _getLogisticNotifications();
++     
++     notifications.addAll(adminNotif);
++     notifications.addAll(logisticNotif);
++ 
++     // Tambahkan label untuk membedakan sumber notifikasi
++     for (var notif in notifications) {
++       if (adminNotif.contains(notif)) {
++         notif[&#39;source&#39;] = &#39;Admin&#39;;
++       } else if (logisticNotif.contains(notif)) {
++         notif[&#39;source&#39;] = &#39;Logistik&#39;;
++       }
++     }
++ 
++     // Sort berdasarkan timestamp terbaru
++     notifications.sort((a, b) =&gt; (b[&#39;timestamp&#39;] as DateTime).compareTo(a[&#39;timestamp&#39;] as DateTime));
++     
++     return notifications.take(30).toList();
++   }
+  
+    /// Mark notifikasi sebagai sudah dibaca (opsional, bisa disimpan di Firestore)
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: hydroponic-mobile-app-main/lib/screens/admin/admin_home_screen.dart</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Memperbaiki SuperAdminNavigation agar setiap role memiliki bottom navigation sendiri:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **code_edit** • Edit file: hydroponic-mobile-app-main/lib/screens/superadmin/superadmin_navigation.dart</summary>
+
+**Chunk 1**
+Lines added: 4, lines removed: 1
+
+```diff
+@@ -22,10 +22,13 @@
+      with SingleTickerProviderStateMixin {
+    late TabController _tabController;
+-   int _selectedBottomIndex = 0;
++   final List&lt;int&gt; _selectedBottomIndices = [0, 0, 0, 0]; // Satu untuk setiap role
+  
+    @override
+    void initState() {
+      super.initState();
+      _tabController = TabController(length: 4, vsync: this);
++     _tabController.addListener(() {
++       setState(() {}); // Rebuild saat tab berubah
++     });
+    }
+  
+```
+
+**Chunk 2**
+Lines added: 34, lines removed: 20
+
+```diff
+@@ -37,29 +40,43 @@
+  
+    Widget _buildRoleView(int roleIndex) {
++     final bottomIndex = _selectedBottomIndices[roleIndex];
++ 
+      switch (roleIndex) {
+        case 0: // Admin
+-         return _selectedBottomIndex == 0
+-             ? const AdminHomeScreen()
+-             : _selectedBottomIndex == 1
+-                 ? const AdminStatusScreen()
+-                 : const ProfileScreen();
++         return IndexedStack(
++           index: bottomIndex,
++           children: const [
++             AdminHomeScreen(),
++             AdminStatusScreen(),
++             ProfileScreen(),
++           ],
++         );
+        case 1: // Petani
+-         return _selectedBottomIndex == 0
+-             ? const FarmerHomeScreen()
+-             : _selectedBottomIndex == 1
+-                 ? const FarmerHistoryScreen()
+-                 : _selectedBottomIndex == 2
+-                     ? const FarmerHarvestScreen()
+-                     : const ProfileScreen();
++         return IndexedStack(
++           index: bottomIndex,
++           children: const [
++             FarmerHomeScreen(),
++             FarmerHistoryScreen(),
++             FarmerHarvestScreen(),
++             ProfileScreen(),
++           ],
++         );
+        case 2: // Staf Logistik
+-         return _selectedBottomIndex == 0
+-             ? const LogisticHomeScreen()
+-             : _selectedBottomIndex == 1
+-                 ? const LogisticDeliveryStatusScreen()
+-                 : const ProfileScreen();
++         return IndexedStack(
++           index: bottomIndex,
++           children: const [
++             LogisticHomeScreen(),
++             LogisticDeliveryStatusScreen(),
++             ProfileScreen(),
++           ],
++         );
+        case 3: // Kurir
+-         return _selectedBottomIndex == 0
+-             ? const CourierHomeScreen()
+-             : const ProfileScreen();
++         return IndexedStack(
++           index: bottomIndex,
++           children: const [
++             CourierHomeScreen(),
++             ProfileScreen(),
++           ],
++         );
+        default:
+          return const SizedBox();
+```
+
+**Chunk 3**
+Lines added: 2, lines removed: undefined
+
+```diff
+@@ -120,4 +137,6 @@
+    Widget build(BuildContext context) {
+      final currentRoleIndex = _tabController.index;
++     final currentBottomIndex = _selectedBottomIndices[currentRoleIndex];
++     final maxBottomIndex = _getMaxBottomIndex(currentRoleIndex);
+  
+      return AnnotatedRegion&lt;SystemUiOverlayStyle&gt;(
+```
+
+**Chunk 4**
+Lines added: undefined, lines removed: 5
+
+```diff
+@@ -141,9 +160,4 @@
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+-             onTap: (index) {
+-               setState(() {
+-                 _selectedBottomIndex = 0; // Reset bottom nav saat ganti role
+-               });
+-             },
+              tabs: const [
+                Tab(
+```
+
+**Chunk 5**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -175,5 +189,5 @@
+            ],
+          ),
+-         bottomNavigationBar: _getMaxBottomIndex(currentRoleIndex) &gt; 0
++         bottomNavigationBar: maxBottomIndex &gt; 0
+              ? BottomNavigationBar(
+                  items: _getBottomNavItems(currentRoleIndex),
+```
+
+**Chunk 6**
+Lines added: 3, lines removed: 3
+
+```diff
+@@ -182,10 +196,10 @@
+                  unselectedItemColor: Colors.grey,
+                  backgroundColor: const Color.fromARGB(255, 231, 255, 237),
+-                 currentIndex: _selectedBottomIndex &gt; _getMaxBottomIndex(currentRoleIndex)
++                 currentIndex: currentBottomIndex &gt; maxBottomIndex
+                      ? 0
+-                     : _selectedBottomIndex,
++                     : currentBottomIndex,
+                  onTap: (index) {
+                    setState(() {
+-                     _selectedBottomIndex = index;
++                     _selectedBottomIndices[currentRoleIndex] = index;
+                    });
+                  },
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 3 files</summary>
+      
+Lint paths:
+
+- `hydroponic-mobile-app-main/lib/screens/superadmin/superadmin_navigation.dart`
+- `hydroponic-mobile-app-main/lib/main.dart`
+- `hydroponic-mobile-app-main/lib/services/notification_service.dart`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Fitur Super Admin sudah diimplementasikan. Ringkasan:
+
+## Fitur Super Admin yang diimplementasikan
+
+### 1. SuperAdminNavigation
+- Halaman khusus dengan TabBar untuk switch antar role
+- 4 tab: Admin, Petani, Logistik, Kurir
+- Setiap tab memiliki bottom navigation sendiri
+- State management terpisah untuk setiap role (bottom nav index tersimpan per role)
+
+### 2. Routing & Authentication
+- Update `main.dart` untuk handle role "Super Admin"
+- Super Admin langsung diarahkan ke `SuperAdminNavigation` saat login
+- Route `/superadmin_navigation` ditambahkan
+
+### 3. Notifikasi Super Admin
+- Update `NotificationService` untuk Super Admin
+- Menampilkan gabungan notifikasi dari Admin dan Logistik
+- Maksimal 30 notifikasi (lebih banyak dari role lain)
+
+### 4. Akses penuh ke semua fitur
+Super Admin dapat mengakses:
+- Tab Admin: Beranda Admin, Cek Status, Profil
+- Tab Petani: Beranda Petani, Riwayat Tanam, Tugas Panen, Profil
+- Tab Logistik: Beranda Logistik, Status Pengiriman, Profil
+- Tab Kurir: Beranda Kurir, Profil
+
+## Cara menggunakan
+
+1. Buat akun Super Admin di Firestore:
+   - Collection: `pengguna`
+   - Field `posisi`: `"Super Admin"`
+   - Field lainnya: `nama_pengguna`, `email`, dll
+
+2. Login dengan akun Super Admin:
+   - Akan langsung masuk ke halaman Super Admin
+   - Bisa switch antar role menggunakan tab di atas
+   - Setiap role memiliki bottom navigation sendiri
+
+## Catatan
+
+- Super Admin bisa melihat dan menggunakan semua fitur dari semua role
+- Cocok untuk testing dan monitoring aplikasi
+- State setiap role terpisah (misalnya, jika di tab Admin pilih "Cek Status", lalu pindah ke tab Petani, saat kembali ke Admin masih di "Cek Status")
+
+Fitur Super Admin siap digunakan. Dosen bisa login sebagai Super Admin dan mengakses semua role untuk testing aplikasi.
+
+---
+
+_**User (2025-11-25 13:46Z)**_
+
+
+
+email "dosen@gmail.com"
+
+(string)
+
+nama_pengguna "dosen"
+
+(string)
+
+posisi "Super Admin" 
+
+
+
+Di fireabse auth juga sudah ditambahkan
+
+Saat coba login "exception: Akun tidak terdaftar sebagai karyawan"
+
+---
+
+_**Agent (model default, mode Agent)**_
+
+
+
+---
+
+
+Memeriksa auth service untuk menemukan validasi yang menyebabkan error:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: hydroponic-mobile-app-main/lib/services/auth_service.dart</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="search" data-tool-name="grep">
+<details>
+<summary>Tool use: **grep** • Grep for "tidak terdaftar sebagai karyawan|Akun tidak terdaftar" • 2 matches</summary>
+
+Output mode: content
+
+
+| File | Content | Line |
+|------|------|------|
+| `.\hydroponic-mobile-app-main\lib\services\auth_service.dart` | `throw Exception('Akun tidak terdaftar sebagai karyawan.');` | L30 |
+| `.\hydroponic-mobile-app-main\lib\screens\login_screen.dart` | `throw Exception('Akun tidak terdaftar sebagai karyawan.');` | L186 |
+
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Memeriksa login screen dan memperbaiki validasi. Kemungkinan dokumen di Firestore belum dibuat dengan UID yang sesuai dengan Firebase Auth. Memperbaiki validasi dan memastikan dokumen dibuat dengan benar:
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file">
+<details><summary>Tool use: **read_file** • Read file: hydroponic-mobile-app-main/lib/screens/login_screen.dart</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Memperbaiki dua hal:
+1. Menambahkan case "Super Admin" di login screen
+2. Memastikan dokumen Firestore dibuat dengan UID yang benar
+
+Memperbaiki login screen dan menambahkan error handling yang lebih baik:
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **code_edit** • Edit file: hydroponic-mobile-app-main/lib/screens/login_screen.dart</summary>
+
+**Chunk 1**
+Lines added: 3, lines removed: undefined
+
+```diff
+@@ -204,4 +204,7 @@
+            route = &#39;/admin_navigation&#39;;
+            break;
++         case &#39;Super Admin&#39;:
++           route = &#39;/superadmin_navigation&#39;;
++           break;
+          default:
+            route = &#39;/login&#39;;
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="search_replace">
+
+<details><summary>Tool use: **code_edit** • Edit file: hydroponic-mobile-app-main/lib/services/auth_service.dart</summary>
+
+**Chunk 1**
+Lines added: 5, lines removed: 1
+
+```diff
+@@ -28,5 +28,9 @@
+        // Jika akun Firebase ada tapi tidak terdaftar sebagai pengguna perusahaan
+        await _auth.signOut();
+-       throw Exception(&#39;Akun tidak terdaftar sebagai karyawan.&#39;);
++       throw Exception(
++         &#39;Akun tidak terdaftar sebagai karyawan. &#39;
++         &#39;Pastikan dokumen di Firestore collection &quot;pengguna&quot; dibuat dengan document ID yang sama dengan UID dari Firebase Auth. &#39;
++         &#39;UID: $uid&#39;
++       );
+      }
+  
+```
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="read_lints">
+<details>
+          <summary>Tool use: **read_lints** • Read lints for 2 files</summary>
+      
+Lint paths:
+
+- `hydroponic-mobile-app-main/lib/screens/login_screen.dart`
+- `hydroponic-mobile-app-main/lib/services/auth_service.dart`
+
+Lint results
+
+
+**No lint errors found**
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Memperbaiki login screen. Masalah utama: dokumen di Firestore harus dibuat dengan document ID yang sama dengan UID dari Firebase Auth. Membuat helper untuk memastikan dokumen dibuat dengan benar:
+
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="write">
+<details>
+<summary>Tool use: **write**</summary>
+
+
+Parameters:
+
+```json
+{
+  &quot;relativeWorkspacePath&quot;: &quot;hydroponic-mobile-app-main/lib/utils/firestore_helper.md&quot;
+}
+```
+Additional data:
+
+```json
+{
+  &quot;codeblockId&quot;: &quot;bca10b9c-6505-4222-b167-b822a517e5e0&quot;
+}
+```
+User decision: **accepted**
+
+Status: **loading**
+
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+---
+

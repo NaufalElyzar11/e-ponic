@@ -203,6 +203,9 @@ class _LoginScreenState extends State<LoginScreen> {
         case 'Admin':
           route = '/admin_navigation';
           break;
+        case 'Super Admin':
+          route = '/superadmin_navigation';
+          break;
         default:
           route = '/login';
       }

@@ -36,6 +36,8 @@ class NotificationService {
             return await _getLogisticNotifications();
           case 'Kurir':
             return await _getCourierNotifications(user.uid);
+          case 'Super Admin':
+            return await _getSuperAdminNotifications();
           default:
             return <Map<String, dynamic>>[];
         }
@@ -369,6 +371,32 @@ class NotificationService {
     notifications.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
     
     return notifications.take(20).toList();
+  }
+
+  /// Notifikasi untuk Super Admin (gabungan semua notifikasi)
+  Future<List<Map<String, dynamic>>> _getSuperAdminNotifications() async {
+    final notifications = <Map<String, dynamic>>[];
+
+    // Gabungkan semua notifikasi dari semua role
+    final adminNotif = await _getAdminNotifications();
+    final logisticNotif = await _getLogisticNotifications();
+    
+    notifications.addAll(adminNotif);
+    notifications.addAll(logisticNotif);
+
+    // Tambahkan label untuk membedakan sumber notifikasi
+    for (var notif in notifications) {
+      if (adminNotif.contains(notif)) {
+        notif['source'] = 'Admin';
+      } else if (logisticNotif.contains(notif)) {
+        notif['source'] = 'Logistik';
+      }
+    }
+
+    // Sort berdasarkan timestamp terbaru
+    notifications.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
+    
+    return notifications.take(30).toList();
   }
 
   /// Mark notifikasi sebagai sudah dibaca (opsional, bisa disimpan di Firestore)

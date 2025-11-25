@@ -27,7 +27,11 @@ class AuthService {
     if (!doc.exists) {
       // Jika akun Firebase ada tapi tidak terdaftar sebagai pengguna perusahaan
       await _auth.signOut();
-      throw Exception('Akun tidak terdaftar sebagai karyawan.');
+      throw Exception(
+        'Akun tidak terdaftar sebagai karyawan. '
+        'Pastikan dokumen di Firestore collection "pengguna" dibuat dengan document ID yang sama dengan UID dari Firebase Auth. '
+        'UID: $uid'
+      );
     }
 
     return credential.user;
