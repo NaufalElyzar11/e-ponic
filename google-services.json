@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "167331292376",
+    "project_id": "e-ponic",
+    "storage_bucket": "e-ponic.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:167331292376:android:cb10a5ee5f7afba38c63ad",
+        "android_client_info": {
+          "package_name": "com.example.hydroponics_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC11HNWU0ZO1QNprj7Rt_AvdJ-nvoDCIwY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

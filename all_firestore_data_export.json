@@ -1,0 +1,184 @@
+{
+    "data_panen": [
+        {
+            "id_petani": "Utrm4Cnve6fPFxeqhLh1dA0XULF2",
+            "tanggal_panen": "2025-11-24 16:00:00+00:00",
+            "created_at": "2025-11-24 20:05:41.100000+00:00",
+            "jumlah_panen": 15,
+            "id": "JyDuDk0HTTSy2D6lpDD5"
+        }
+    ],
+    "data_tanam": [
+        {
+            "id_tanaman": "2sw7x47SjsIEem0VfbqB",
+            "jumlah_tanam": 30,
+            "id_petani": "Utrm4Cnve6fPFxeqhLh1dA0XULF2",
+            "created_at": "2025-11-24 19:48:34.525000+00:00",
+            "tanggal_tanam": "2025-10-19 16:00:00+00:00",
+            "id": "4RuOXAQZbfOMJVNa0mZI"
+        },
+        {
+            "id_tanaman": "2sw7x47SjsIEem0VfbqB",
+            "jumlah_tanam": 5,
+            "id_petani": "Utrm4Cnve6fPFxeqhLh1dA0XULF2",
+            "created_at": "2025-11-24 18:51:27.868000+00:00",
+            "tanggal_tanam": "2025-10-15 16:00:00+00:00",
+            "id": "4mby47iIyjD37vsQ0UwL"
+        },
+        {
+            "id_tanaman": "2sw7x47SjsIEem0VfbqB",
+            "jumlah_tanam": 10,
+            "id_petani": "Utrm4Cnve6fPFxeqhLh1dA0XULF2",
+            "created_at": "2025-11-24 18:50:43.413000+00:00",
+            "tanggal_tanam": "2025-11-24 16:00:00+00:00",
+            "id": "QGRqGfiotKvNTna9lswn"
+        },
+        {
+            "id_tanaman": "2sw7x47SjsIEem0VfbqB",
+            "jumlah_tanam": 15,
+            "id_petani": "Utrm4Cnve6fPFxeqhLh1dA0XULF2",
+            "created_at": "2025-11-24 20:06:22.534000+00:00",
+            "tanggal_tanam": "2025-11-24 16:00:00+00:00",
+            "id": "cG8iyGl7B2rJRJ2i3cOv"
+        },
+        {
+            "id_tanaman": "2sw7x47SjsIEem0VfbqB",
+            "jumlah_tanam": 5,
+            "id_petani": "Utrm4Cnve6fPFxeqhLh1dA0XULF2",
+            "created_at": "2025-11-24 19:44:57.062000+00:00",
+            "tanggal_tanam": "2025-11-18 16:00:00+00:00",
+            "id": "k5dxbmYlYJwU2iTWxQYa"
+        }
+    ],
+    "pelanggan": [
+        {
+            "created_at": "2025-11-24 19:47:53.804000+00:00",
+            "nama_pelanggan": "Fridho",
+            "no_hp": "081346425154",
+            "alamat": "Kotabaru",
+            "id": "wvAGmzXjkCkNg1wV5Ub4"
+        },
+        {
+            "created_at": "2025-11-24 18:42:35.899000+00:00",
+            "nama_pelanggan": "Nanda",
+            "no_hp": "085349524183",
+            "alamat": "Landasan Ulin",
+            "id": "y4NXfHGCAkcSyOpA46Ze"
+        }
+    ],
+    "pengguna": [
+        {
+            "nama_pengguna": "Raihan",
+            "email": "raihan@gmail.com",
+            "posisi": "Kurir",
+            "created_at": "2025-11-24 18:39:32.650000+00:00",
+            "id": "7KqXU6npSNZ9LSEbN3KhKhNjqot2"
+        },
+        {
+            "nama_pengguna": "Naufal",
+            "email": "naugal@gmail.com",
+            "posisi": "Kurir",
+            "created_at": "2025-11-24 19:05:07.278000+00:00",
+            "id": "92cj8ClIXHa25XFnck0OwK2brcu2"
+        },
+        {
+            "nama_pengguna": "Nadia",
+            "email": "nadia@gmail.com",
+            "posisi": "Kurir",
+            "created_at": "2025-11-24 19:33:37.893000+00:00",
+            "id": "B0AnJREyBPW279v7M2xOD92lktD2"
+        },
+        {
+            "nama_pengguna": "Rizki",
+            "email": "rizki@gmail.com",
+            "posisi": "Staf Logistik",
+            "created_at": "2025-11-24 18:49:32.216000+00:00",
+            "id": "I8jqy1j9bHe1yF5W3k1XzbQU4Gz2"
+        },
+        {
+            "nama_pengguna": "Rara",
+            "email": "rara@gmail.com",
+            "posisi": "Petani",
+            "created_at": "2025-11-24 19:12:19.540000+00:00",
+            "id_tanaman": "GD20DY9mWf4jaOYxXA1Z",
+            "id": "QJGA9hOhDCVxNSWZ8QVmhbkTDeR2"
+        },
+        {
+            "nama_pengguna": "Aufa",
+            "email": "aufa@gmail.com",
+            "posisi": "Petani",
+            "created_at": "2025-11-24 18:48:28.356000+00:00",
+            "id_tanaman": "2sw7x47SjsIEem0VfbqB",
+            "id": "Utrm4Cnve6fPFxeqhLh1dA0XULF2"
+        },
+        {
+            "nama_pengguna": "Nanda",
+            "email": "nanda@gmail.com",
+            "posisi": "Staf Logistik",
+            "created_at": "2025-11-24 19:27:19.507000+00:00",
+            "id": "gaC1gcbRrBUgS2MEeudRTt84ogN2"
+        },
+        {
+            "nama_pengguna": "admin",
+            "email": "admin@gmail.com",
+            "posisi": "Admin",
+            "created_at": "2025-11-24 18:38:41.709000+00:00",
+            "id": "mgfvlJNIk8XxUnafXdBswsEmvKI3"
+        }
+    ],
+    "tanaman": [
+        {
+            "masa_tanam": "30-45 hari",
+            "nama_tanaman": "Selada",
+            "jadwal_pengecekan_tanaman": "2025-11-26 18:42:01.323972+00:00",
+            "harga": 5000.0,
+            "jadwal_pengecekan_air_dan_nutrisi": "2025-11-25 18:42:01.323508+00:00",
+            "jadwal_pembersihan_instalasi": "2025-12-01 18:42:01.324017+00:00",
+            "id": "2sw7x47SjsIEem0VfbqB"
+        },
+        {
+            "masa_tanam": "25-30 hari",
+            "nama_tanaman": "Kangkung",
+            "jadwal_pengecekan_tanaman": "2025-11-26 18:42:01.324102+00:00",
+            "harga": 7000.0,
+            "jadwal_pengecekan_air_dan_nutrisi": "2025-11-25 18:42:01.324090+00:00",
+            "jadwal_pembersihan_instalasi": "2025-12-01 18:42:01.324113+00:00",
+            "id": "GD20DY9mWf4jaOYxXA1Z"
+        },
+        {
+            "masa_tanam": "40-50 hari",
+            "nama_tanaman": "Pakcoy",
+            "jadwal_pengecekan_tanaman": "2025-11-26 18:42:01.324063+00:00",
+            "harga": 6000.0,
+            "jadwal_pengecekan_air_dan_nutrisi": "2025-11-25 18:42:01.324047+00:00",
+            "jadwal_pembersihan_instalasi": "2025-12-01 18:42:01.324076+00:00",
+            "id": "Rg1KGFvIaQhKE4O0q6GM"
+        }
+    ],
+    "transaksi": [
+        {
+            "is_assigned": false,
+            "id_pelanggan": "y4NXfHGCAkcSyOpA46Ze",
+            "is_paid": true,
+            "tanggal": "2025-11-24 16:00:00+00:00",
+            "alamat": "Landasan Ulin",
+            "nama_pelanggan": "Nanda",
+            "is_deliver": false,
+            "created_at": "2025-11-24 18:42:36.187000+00:00",
+            "is_harvest": false,
+            "id": "4smF5f7wXPK8kTnShHbM"
+        },
+        {
+            "is_assigned": false,
+            "id_pelanggan": "wvAGmzXjkCkNg1wV5Ub4",
+            "is_paid": true,
+            "tanggal": "2025-11-24 16:00:00+00:00",
+            "alamat": "Kotabaru",
+            "nama_pelanggan": "Fridho",
+            "is_deliver": false,
+            "created_at": "2025-11-24 19:47:54.065000+00:00",
+            "is_harvest": false,
+            "id": "TBAm0Q9EmSxtrIoDdN2n"
+        }
+    ]
+}
