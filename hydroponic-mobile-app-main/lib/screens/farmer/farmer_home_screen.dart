@@ -109,195 +109,359 @@ class _FarmerHomeContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(15),
-            color: const Color.fromARGB(255, 1, 68, 33),
-            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance
-                  .collection('data_tanam')
-                  .where('id_petani', isEqualTo: info.uid)
-                  .where('id_tanaman', isEqualTo: info.plantId)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const FarmerTotalPlantCard(
-                    header: 'Total Bibit Ditanam',
-                    plantCount: 0,
-                  );
-                }
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('data_tanam')
+          .where('id_petani', isEqualTo: info.uid)
+          .where('id_tanaman', isEqualTo: info.plantId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Error data tanam: ${snapshot.error}'));
+        }
 
-                final docs = snapshot.data?.docs ?? [];
-                final total = docs.fold<int>(
-                  0,
-                  (prev, doc) =>
-                      prev + (doc.data()['jumlah_tanam'] as int? ?? 0),
-                );
+        int totalBibit = 0;
+        DateTime? tanggalTanamAwal;
+        bool isLoading = snapshot.connectionState == ConnectionState.waiting;
+        bool isDateMissing = false;
+        
+        List<QueryDocumentSnapshot<Map<String, dynamic>>> sortedDocs = [];
 
-                return FarmerTotalPlantCard(
-                  header: 'Total Bibit Ditanam',
-                  plantCount: total,
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                StyledElevatedButton(
-                  text: 'Tambah Data Tanaman ',
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/add_plant_data');
-                  },
-                  foregroundColor: Colors.white,
-                  backgroundColor: const Color.fromARGB(255, 1, 68, 33),
-                  icon: Icons.add,
-                ),
-                const SizedBox(height: 15),
-                const Text(
-                  'Daftar Jadwal',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-                if (info.plantId == null)
-                  const Text(
-                    'Akun petani belum terhubung dengan tanaman.',
-                  )
-                else
-                  // Stream status penyelesaian jadwal perawatan
-                  StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                    stream: FirebaseFirestore.instance
-                        .collection('jadwal_perawatan')
-                        .where('id_petani', isEqualTo: info.uid)
-                        .where('id_tanaman', isEqualTo: info.plantId)
-                        .snapshots(),
-                    builder: (context, statusSnap) {
-                      final statusDocs = statusSnap.data?.docs ?? [];
-                      final Map<String, bool> statusMap = {};
-                      for (final doc in statusDocs) {
-                        final d = doc.data();
-                        final field = (d['field'] ?? '') as String;
-                        final ts = d['tanggal'] as Timestamp?;
-                        final date = ts?.toDate();
-                        if (field.isEmpty || date == null) continue;
-                        final key =
-                            '${field}_${DateFormat('yyyy-MM-dd').format(date.toLocal())}';
-                        statusMap[key] = (d['is_done'] ?? false) as bool;
-                      }
+        if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+          var docs = snapshot.data!.docs.toList();
 
-                      return StreamBuilder<
-                          DocumentSnapshot<Map<String, dynamic>>>(
+          // Client-side sorting
+          docs.sort((a, b) {
+            DateTime? getOb(dynamic data) {
+              if (data == null) return null;
+              if (data is Timestamp) return data.toDate();
+              if (data is String) return DateTime.tryParse(data);
+              return null;
+            }
+            final dateA = getOb(a.data()['tanggal_tanam']) ?? DateTime(2100);
+            final dateB = getOb(b.data()['tanggal_tanam']) ?? DateTime(2100);
+            return dateA.compareTo(dateB);
+          });
+          
+          sortedDocs = docs;
+
+          totalBibit = docs.fold<int>(
+            0,
+            (prev, doc) => prev + (doc.data()['jumlah_tanam'] as int? ?? 0),
+          );
+
+          if (docs.isNotEmpty) {
+            final firstDocData = docs.first.data();
+            final rawDate = firstDocData['tanggal_tanam'];
+            if (rawDate is Timestamp) {
+              tanggalTanamAwal = rawDate.toDate();
+            } else if (rawDate is String) {
+              try {
+                tanggalTanamAwal = DateTime.parse(rawDate);
+              } catch (_) {}
+            }
+          }
+        }
+
+        // Fallback jika tanggal tidak ada
+        if (totalBibit > 0 && tanggalTanamAwal == null) {
+          tanggalTanamAwal = DateTime.now();
+          isDateMissing = true;
+        }
+
+        return SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(15),
+                color: const Color.fromARGB(255, 1, 68, 33),
+                width: double.infinity,
+                child: isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(color: Colors.white))
+                    : FarmerTotalPlantCard(
+                        header: 'Total Bibit Ditanam',
+                        plantCount: totalBibit,
+                      ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    StyledElevatedButton(
+                      text: 'Tambah Data Tanaman ',
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/add_plant_data');
+                      },
+                      foregroundColor: Colors.white,
+                      backgroundColor: const Color.fromARGB(255, 1, 68, 33),
+                      icon: Icons.add,
+                    ),
+                    const SizedBox(height: 15),
+                    const Text(
+                      'Daftar Jadwal',
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    if (isDateMissing)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          'Info: Tanggal tanam tidak ditemukan. Menampilkan jadwal simulasi dari hari ini.',
+                          style: TextStyle(color: Colors.orange, fontSize: 12),
+                        ),
+                      ),
+                    const SizedBox(height: 10),
+                    if (isLoading)
+                      const Center(child: CircularProgressIndicator())
+                    else if (info.plantId == null)
+                      const Text('Akun petani belum terhubung dengan tanaman.')
+                    else if (totalBibit == 0)
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Colors.grey),
+                            SizedBox(width: 10),
+                            Expanded(
+                                child: Text(
+                              'Data bibit kosong. Silakan input "Data Tanam".',
+                              style: TextStyle(
+                                  fontStyle: FontStyle.italic,
+                                  color: Colors.grey),
+                            )),
+                          ],
+                        ),
+                      )
+                    else
+                      StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                         stream: FirebaseFirestore.instance
-                            .collection('tanaman')
-                            .doc(info.plantId)
+                            .collection('jadwal_perawatan')
+                            .where('id_petani', isEqualTo: info.uid)
+                            .where('id_tanaman', isEqualTo: info.plantId)
                             .snapshots(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          }
-
-                          if (!snapshot.hasData ||
-                              !snapshot.data!.exists) {
-                            return const Text('Data tanaman tidak ditemukan.');
-                          }
-
-                          final data = snapshot.data!.data() ?? {};
-
-                          final List<PlantMaintenanceModel> schedules = [];
-
-                          void addSchedule({
-                            required String field,
-                            required String title,
-                            required String description,
-                          }) {
-                            final raw = data[field];
-                            final date = _parseDate(raw);
-                            if (date == null) return;
-
+                        builder: (context, statusSnap) {
+                          final statusDocs = statusSnap.data?.docs ?? [];
+                          final Map<String, bool> statusMap = {};
+                          for (final doc in statusDocs) {
+                            final d = doc.data();
+                            final field = (d['field'] ?? '') as String;
+                            final ts = d['tanggal'] as Timestamp?;
+                            final date = ts?.toDate();
+                            if (field.isEmpty || date == null) continue;
                             final key =
                                 '${field}_${DateFormat('yyyy-MM-dd').format(date.toLocal())}';
-                            final isDone =
-                                statusMap[key] ?? false;
+                            statusMap[key] = (d['is_done'] ?? false) as bool;
+                          }
 
-                            schedules.add(
-                              PlantMaintenanceModel(
-                                maintenanceName: title,
-                                description: description,
-                                date:
-                                    DateFormat('dd MMMM yyyy').format(date),
-                                time: DateFormat('HH:mm').format(date),
-                                isDone: isDone,
-                                onTap: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/maintenance_detail',
-                                    arguments: {
-                                      'id_petani': info.uid,
-                                      'id_tanaman': info.plantId,
-                                      'field': field,
-                                      'tanggal': date,
-                                      'is_done': isDone,
-                                      'title': title,
-                                      'description': description,
+                          return StreamBuilder<
+                              DocumentSnapshot<Map<String, dynamic>>>(
+                            stream: FirebaseFirestore.instance
+                                .collection('tanaman')
+                                .doc(info.plantId)
+                                .snapshots(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Padding(
+                                  padding: EdgeInsets.all(20.0),
+                                  child: Center(
+                                      child: CircularProgressIndicator()),
+                                );
+                              }
+
+                              if (!snapshot.hasData || !snapshot.data!.exists) {
+                                return const Text(
+                                    'Data jenis tanaman tidak ditemukan.');
+                              }
+
+                              final data = snapshot.data!.data() ?? {};
+
+                              int getInterval(String field) {
+                                final val = data[field];
+                                if (val is int) return val;
+                                if (val is String) {
+                                  return int.tryParse(val) ?? 1;
+                                }
+                                return 1;
+                              }
+
+                              final intervalAir = getInterval(
+                                  'jadwal_pengecekan_air_dan_nutrisi');
+                              final intervalCek =
+                                  getInterval('jadwal_pengecekan_tanaman');
+                              final intervalBersih =
+                                  getInterval('jadwal_pembersihan_instalasi');
+                              final masaTanam = getInterval('masa_tanam');
+
+                              DateTime calculateNextDate(
+                                  int interval, DateTime startDate) {
+                                final now = DateTime.now();
+                                final today =
+                                    DateTime(now.year, now.month, now.day);
+                                final start = DateTime(startDate.year,
+                                    startDate.month, startDate.day);
+
+                                if (interval <= 0) {
+                                  return today.add(const Duration(days: 1));
+                                }
+
+                                int daysPassed = today.difference(start).inDays;
+
+                                if (daysPassed < 0) {
+                                  return start.add(Duration(days: interval));
+                                }
+
+                                int cycles = (daysPassed / interval).ceil();
+                                if (cycles <= 0) cycles = 1;
+
+                                DateTime candidate = start
+                                    .add(Duration(days: cycles * interval));
+
+                                if (candidate.isBefore(today)) {
+                                  candidate =
+                                      candidate.add(Duration(days: interval));
+                                }
+                                return candidate;
+                              }
+
+                              final baseDate =
+                                  tanggalTanamAwal ?? DateTime.now();
+
+                              DateTime dateAir =
+                                  calculateNextDate(intervalAir, baseDate);
+                              DateTime dateCek =
+                                  calculateNextDate(intervalCek, baseDate);
+                              DateTime dateBersih =
+                                  calculateNextDate(intervalBersih, baseDate);
+
+                              final List<PlantMaintenanceModel> schedules = [];
+
+                              void addSchedule({
+                                required String field,
+                                required String title,
+                                required String description,
+                                required DateTime date,
+                              }) {
+                                final key =
+                                    '${field}_${DateFormat('yyyy-MM-dd').format(date.toLocal())}';
+                                final isDone = statusMap[key] ?? false;
+
+                                schedules.add(
+                                  PlantMaintenanceModel(
+                                    maintenanceName: title,
+                                    description: description,
+                                    date: DateFormat('dd MMMM yyyy')
+                                        .format(date),
+                                    time: '09:00',
+                                    isDone: isDone,
+                                    onTap: () {
+                                      Navigator.pushNamed(
+                                        context,
+                                        '/maintenance_detail',
+                                        arguments: {
+                                          'id_petani': info.uid,
+                                          'id_tanaman': info.plantId,
+                                          'field': field,
+                                          'tanggal': date,
+                                          'is_done': isDone,
+                                          'title': title,
+                                          'description': description,
+                                        },
+                                      );
                                     },
+                                  ),
+                                );
+                              }
+
+                              addSchedule(
+                                field: 'jadwal_pengecekan_air_dan_nutrisi',
+                                title: 'Pengecekan Air & Nutrisi',
+                                description:
+                                    'Cek kualitas air dan tambah nutrisi bila diperlukan.',
+                                date: dateAir,
+                              );
+
+                              addSchedule(
+                                field: 'jadwal_pengecekan_tanaman',
+                                title: 'Pengecekan Tanaman',
+                                description:
+                                    'Periksa kondisi tanaman dan identifikasi hama/penyakit.',
+                                date: dateCek,
+                              );
+
+                              addSchedule(
+                                field: 'jadwal_pembersihan_instalasi',
+                                title: 'Pembersihan Instalasi',
+                                description:
+                                    'Bersihkan pipa dan instalasi hidroponik dari kotoran.',
+                                date: dateBersih,
+                              );
+
+                              // 4. ESTIMASI PANEN (Looping)
+                              for (var doc in sortedDocs) {
+                                final tglTanamRaw = doc.data()['tanggal_tanam'];
+                                DateTime? tglTanam;
+                                if (tglTanamRaw is Timestamp) {
+                                  tglTanam = tglTanamRaw.toDate();
+                                } else if (tglTanamRaw is String) {
+                                  try {
+                                    tglTanam = DateTime.parse(tglTanamRaw);
+                                  } catch (_) {}
+                                }
+
+                                if (tglTanam != null) {
+                                  final panenDate = tglTanam
+                                      .add(Duration(days: masaTanam));
+                                  
+                                  // --- LOGIKA BARU: Hapus jika sudah lewat ---
+                                  final now = DateTime.now();
+                                  // Buat perbandingan tanggal saja (reset jam ke 00:00)
+                                  final today = DateTime(now.year, now.month, now.day);
+                                  final pDate = DateTime(panenDate.year, panenDate.month, panenDate.day);
+
+                                  // Jika panenDate < hari ini (kemarin atau sebelumnya), skip
+                                  if (pDate.isBefore(today)) {
+                                    continue;
+                                  }
+
+                                  addSchedule(
+                                    field: 'estimasi_panen',
+                                    title: 'Estimasi Panen',
+                                    description:
+                                        'Perkiraan waktu panen berdasarkan masa tanam.',
+                                    date: panenDate,
+                                  );
+                                }
+                              }
+
+                              return ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: schedules.length,
+                                itemBuilder: (BuildContext context, int index) {
+                                  return MaintenanceScheduleCard(
+                                    maintenance: schedules[index],
                                   );
                                 },
-                              ),
-                            );
-                          }
-
-                          addSchedule(
-                            field: 'jadwal_pengecekan_air_dan_nutrisi',
-                            title: 'Pengecekan Air & Nutrisi',
-                            description:
-                                'Cek kualitas air dan tambah nutrisi bila diperlukan.',
-                          );
-                          addSchedule(
-                            field: 'jadwal_pengecekan_tanaman',
-                            title: 'Pengecekan Tanaman',
-                            description:
-                                'Periksa kondisi tanaman dan identifikasi hama/penyakit.',
-                          );
-                          addSchedule(
-                            field: 'jadwal_pembersihan_instalasi',
-                            title: 'Pembersihan Instalasi',
-                            description:
-                                'Bersihkan pipa dan instalasi hidroponik dari kotoran.',
-                          );
-
-                          if (schedules.isEmpty) {
-                            return const Text('Belum ada jadwal perawatan.');
-                          }
-
-                          return ListView.builder(
-                            shrinkWrap: true,
-                            physics:
-                                const NeverScrollableScrollPhysics(),
-                            itemCount: schedules.length,
-                            itemBuilder:
-                                (BuildContext context, int index) {
-                              return MaintenanceScheduleCard(
-                                maintenance: schedules[index],
                               );
                             },
                           );
                         },
-                      );
-                    },
-                  ),
-              ],
-            ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -328,5 +492,3 @@ DateTime? _parseDate(dynamic raw) {
   }
   return null;
 }
-
-// Logika toggle status jadwal dipindahkan ke `MaintenanceDetailScreen`
