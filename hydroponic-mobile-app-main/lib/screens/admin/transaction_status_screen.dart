@@ -14,6 +14,7 @@ import 'package:hydroponics_app/theme/app_colors.dart';
 import 'package:hydroponics_app/widgets/styled_elevated_button.dart';
 import 'package:hydroponics_app/widgets/transaction_status_card.dart';
 import 'package:hydroponics_app/services/transaction_service.dart';
+import 'package:hydroponics_app/screens/admin/add_edit_transaction_screen.dart';
 
 class TransactionStatusScreen extends StatefulWidget {
   const TransactionStatusScreen({super.key});
@@ -144,6 +145,18 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
                         onDelete: () {
                           if (model.id != null) {
                             _confirmDelete(context, model.id!);
+                          }
+                        },
+                        onEdit: () {
+                          if (model.id != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AddEditTransactionScreen(
+                                  transactionId: model.id!,
+                                ),
+                              ),
+                            );
                           }
                         },
                         onAssign: () {

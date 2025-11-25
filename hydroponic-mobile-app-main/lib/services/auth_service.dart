@@ -85,6 +85,30 @@ class AuthService {
   Future<void> signOut() async {
     await _auth.signOut();
   }
+
+  /// Mengupdate data akun karyawan di koleksi `pengguna`.
+  /// Hanya dipanggil dari Admin.
+  Future<void> updateAccount({
+    required String userId,
+    required String namaPengguna,
+    required String posisi,
+    String? idTanaman,
+  }) async {
+    final Map<String, dynamic> updateData = {
+      'nama_pengguna': namaPengguna,
+      'posisi': posisi,
+      'updated_at': FieldValue.serverTimestamp(),
+    };
+
+    if (idTanaman != null) {
+      updateData['id_tanaman'] = idTanaman;
+    } else if (posisi != 'Petani') {
+      // Jika bukan Petani, hapus id_tanaman
+      updateData['id_tanaman'] = FieldValue.delete();
+    }
+
+    await _firestore.collection('pengguna').doc(userId).update(updateData);
+  }
 }
 
 

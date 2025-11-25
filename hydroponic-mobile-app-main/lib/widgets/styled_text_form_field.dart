@@ -11,6 +11,7 @@ class StyledTextFormField extends StatelessWidget {
   final bool obscureText;
   final String? Function(String?)? validator;
   final TextEditingController? controller;
+  final bool enabled;
 
   const StyledTextFormField({
     super.key,
@@ -21,6 +22,7 @@ class StyledTextFormField extends StatelessWidget {
     this.obscureText = false,
     this.validator,
     this.controller,
+    this.enabled = true,
   });
 
   @override
@@ -29,6 +31,7 @@ class StyledTextFormField extends StatelessWidget {
       controller: controller,
       validator: validator,
       obscureText: obscureText,
+      enabled: enabled,
       cursorColor: AppColors.primary,
       decoration: InputDecoration(
         labelText: labelText,

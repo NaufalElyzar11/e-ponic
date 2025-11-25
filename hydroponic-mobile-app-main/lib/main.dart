@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:hydroponics_app/screens/admin/add_edit_transaction_screen.dart';
 import 'package:hydroponics_app/screens/admin/admin_navigation.dart';
+import 'package:hydroponics_app/screens/admin/edit_account_screen.dart';
 import 'package:hydroponics_app/screens/admin/employee_account_list_screen.dart';
 import 'package:hydroponics_app/screens/admin/plant_status_screen.dart';
 import 'package:hydroponics_app/screens/admin/transaction_status_screen.dart';

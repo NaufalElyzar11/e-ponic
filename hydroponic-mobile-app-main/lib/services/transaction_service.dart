@@ -132,6 +132,90 @@ class TransactionService {
         .update({'is_paid': isPaid});
   }
 
+  /// Mengupdate transaksi yang sudah ada beserta detail_transaksi.
+  Future<void> updateTransactionWithDetails({
+    required String transactionId,
+    required String namaPelanggan,
+    required String alamat,
+    String? noHp,
+    required DateTime tanggal,
+    required bool isPaid,
+    required Map<String, int> quantities,
+  }) async {
+    final pelangganId = await _createOrGetCustomer(
+      nama: namaPelanggan,
+      alamat: alamat,
+      noHp: noHp,
+    );
+
+    final plantsByName = await _getPlantsByName();
+
+    final List<Map<String, dynamic>> items = [];
+    double totalHarga = 0;
+
+    quantities.forEach((name, qty) {
+      if (qty <= 0) return;
+      final plantDoc = plantsByName[name.toLowerCase()];
+      if (plantDoc == null) return;
+
+      final data = plantDoc.data();
+      final harga = (data['harga'] as num?)?.toDouble() ?? 0.0;
+      final subtotal = harga * qty;
+      totalHarga += subtotal;
+
+      items.add({
+        'id_tanaman': plantDoc.id,
+        'nama_tanaman': data['nama_tanaman'],
+        'jumlah': qty,
+        'harga': harga,
+        'total_bayar': subtotal,
+      });
+    });
+
+    if (items.isEmpty) {
+      throw Exception('Minimal satu jenis sayur harus memiliki jumlah > 0');
+    }
+
+    // Update transaksi
+    await _db.collection('transaksi').doc(transactionId).update({
+      'id_pelanggan': pelangganId,
+      'nama_pelanggan': namaPelanggan,
+      'alamat': alamat,
+      'tanggal': Timestamp.fromDate(tanggal),
+      'is_paid': isPaid,
+      'items': items,
+      'total_harga': totalHarga,
+      'updated_at': FieldValue.serverTimestamp(),
+    });
+
+    // Hapus detail_transaksi lama dan buat yang baru
+    final batch = _db.batch();
+
+    // Hapus detail lama
+    final detailSnapshot = await _db
+        .collection('detail_transaksi')
+        .where('id_transaksi', isEqualTo: transactionId)
+        .get();
+
+    for (final doc in detailSnapshot.docs) {
+      batch.delete(doc.reference);
+    }
+
+    // Tambahkan detail baru
+    for (final item in items) {
+      final detailRef = _db.collection('detail_transaksi').doc();
+      batch.set(detailRef, {
+        'id_transaksi': transactionId,
+        'id_tanaman': item['id_tanaman'],
+        'jumlah': item['jumlah'],
+        'total_bayar': item['total_bayar'],
+        'created_at': FieldValue.serverTimestamp(),
+      });
+    }
+
+    await batch.commit();
+  }
+
   Future<void> deleteTransactionWithDetails(String transactionId) async {
     final batch = _db.batch();
 

@@ -10,6 +10,7 @@ import 'package:hydroponics_app/models/user_model.dart';
 import 'package:hydroponics_app/theme/app_colors.dart';
 import 'package:hydroponics_app/widgets/employee_list_card.dart';
 import 'package:hydroponics_app/widgets/styled_elevated_button.dart';
+import 'package:hydroponics_app/screens/admin/edit_account_screen.dart';
 
 class EmployeeAccountListScreen extends StatefulWidget{
   const EmployeeAccountListScreen({super.key});
@@ -116,6 +117,7 @@ class _EmployeeAccountListScreenState extends State<EmployeeAccountListScreen> {
                         EmployeeListCard(
                           role: 'Petani',
                           userData: farmers,
+                          onEdit: (user) => _editAccount(user),
                           onDelete: (user) =>
                               _deleteAccount(user, docs),
                         ),
@@ -123,6 +125,7 @@ class _EmployeeAccountListScreenState extends State<EmployeeAccountListScreen> {
                         EmployeeListCard(
                           role: 'Kurir',
                           userData: couriers,
+                          onEdit: (user) => _editAccount(user),
                           onDelete: (user) =>
                               _deleteAccount(user, docs),
                         ),
@@ -130,6 +133,7 @@ class _EmployeeAccountListScreenState extends State<EmployeeAccountListScreen> {
                         EmployeeListCard(
                           role: 'Staf Logistik',
                           userData: logistics,
+                          onEdit: (user) => _editAccount(user),
                           onDelete: (user) =>
                               _deleteAccount(user, docs),
                         ),
@@ -141,6 +145,22 @@ class _EmployeeAccountListScreenState extends State<EmployeeAccountListScreen> {
             )
           ),
         ],
+      ),
+    );
+  }
+
+  // Fungsi untuk edit akun
+  void _editAccount(UserModel user) {
+    if (user.id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID akun tidak ditemukan')),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditAccountScreen(userId: user.id!),
       ),
     );
   }

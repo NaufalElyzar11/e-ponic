@@ -10,7 +10,9 @@ import 'package:hydroponics_app/widgets/styled_elevated_button.dart';
 import 'package:hydroponics_app/services/transaction_service.dart';
 
 class AddEditTransactionScreen extends StatefulWidget{
-  const AddEditTransactionScreen({super.key});
+  final String? transactionId;
+  
+  const AddEditTransactionScreen({super.key, this.transactionId});
 
   @override
   State<AddEditTransactionScreen> createState() => _AddEditTransactionScreenState();
@@ -31,6 +33,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
 
   DateTime? _selectedDate;
   bool _isSubmitting = false;
+  bool _isLoading = false;
 
   // harga sayur per jenis, di-load dari koleksi `tanaman`
   Map<String, double> _prices = {};
@@ -49,6 +52,11 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
     _kangkungController.addListener(_recalculateTotal);
 
     _loadPrices();
+    
+    // Load transaction data if editing
+    if (widget.transactionId != null) {
+      _loadTransactionData();
+    }
   }
 
   @override
@@ -77,7 +85,10 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Tambah Transaksi', style: TextStyle(fontWeight: FontWeight.bold),),
+        title: Text(
+          widget.transactionId != null ? 'Edit Transaksi' : 'Tambah Transaksi',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         titleSpacing: 10,
         foregroundColor: Colors.white,
         backgroundColor: Color.fromARGB(255, 1, 68, 33),
@@ -88,7 +99,9 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
           icon: Icon(Icons.arrow_back),
         ),
       ),
-      body: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
         child: Container(
           padding: EdgeInsetsGeometry.all(15),
           child: Form(
@@ -335,8 +348,10 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
 
                     SizedBox(height: 20,),
                     StyledElevatedButton(
-                      text: 'Tambah Transaksi', 
-                      onPressed: _isSubmitting ? null : _handleSubmit,
+                      text: widget.transactionId != null 
+                          ? (_isSubmitting ? 'Memproses...' : 'Update Transaksi')
+                          : (_isSubmitting ? 'Memproses...' : 'Tambah Transaksi'), 
+                      onPressed: (_isSubmitting || _isLoading) ? null : _handleSubmit,
                       foregroundColor: AppColors.primary,
                       backgroundColor: Colors.white,
                     )
@@ -356,6 +371,82 @@ extension on String {
 }
 
 extension _AddEditTransactionScreenLogic on _AddEditTransactionScreenState {
+  Future<void> _loadTransactionData() async {
+    if (widget.transactionId == null) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('transaksi')
+          .doc(widget.transactionId!)
+          .get();
+
+      if (!doc.exists) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Transaksi tidak ditemukan')),
+          );
+          Navigator.pop(context);
+        }
+        return;
+      }
+
+      final data = doc.data()!;
+      
+      // Load buyer data
+      _buyerNameController.text = (data['nama_pelanggan'] ?? '') as String;
+      _buyerAddressController.text = (data['alamat'] ?? '') as String;
+      
+      // Load date
+      final ts = data['tanggal'] as Timestamp?;
+      if (ts != null) {
+        _selectedDate = ts.toDate();
+        _dateController.text = DateFormat('dd MMM yyyy').format(_selectedDate!);
+      }
+      
+      // Load payment status
+      _selectedPaymentStatus = (data['is_paid'] ?? false) as bool 
+          ? _paymentStatuses[0] 
+          : _paymentStatuses[1];
+      
+      // Load items
+      final items = (data['items'] as List<dynamic>? ?? []);
+      for (final item in items) {
+        final itemMap = item as Map<String, dynamic>;
+        final namaTanaman = (itemMap['nama_tanaman'] ?? '') as String;
+        final jumlah = (itemMap['jumlah'] as int?) ?? 0;
+        
+        if (namaTanaman.toLowerCase() == 'selada') {
+          isSeladaChecked = true;
+          _seladaController.text = jumlah.toString();
+        } else if (namaTanaman.toLowerCase() == 'pakcoy') {
+          isPakcoyChecked = true;
+          _pakcoyController.text = jumlah.toString();
+        } else if (namaTanaman.toLowerCase() == 'kangkung') {
+          isKangkungChecked = true;
+          _kangkungController.text = jumlah.toString();
+        }
+      }
+      
+      _recalculateTotal();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memuat data transaksi: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _loadPrices() async {
     try {
       final snapshot =
@@ -493,18 +584,37 @@ extension _AddEditTransactionScreenLogic on _AddEditTransactionScreenState {
         quantities['Kangkung'] = int.parse(_kangkungController.text);
       }
 
-      await TransactionService.instance.createTransactionWithDetails(
-        namaPelanggan: _buyerNameController.text.trim(),
-        alamat: _buyerAddressController.text.trim(),
-        tanggal: _selectedDate!,
-        isPaid: _selectedPaymentStatus == 'Lunas',
-        quantities: quantities,
-      );
+      if (widget.transactionId != null) {
+        // Update existing transaction
+        await TransactionService.instance.updateTransactionWithDetails(
+          transactionId: widget.transactionId!,
+          namaPelanggan: _buyerNameController.text.trim(),
+          alamat: _buyerAddressController.text.trim(),
+          tanggal: _selectedDate!,
+          isPaid: _selectedPaymentStatus == 'Lunas',
+          quantities: quantities,
+        );
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Transaksi berhasil ditambahkan')),
-      );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Transaksi berhasil diupdate')),
+        );
+      } else {
+        // Create new transaction
+        await TransactionService.instance.createTransactionWithDetails(
+          namaPelanggan: _buyerNameController.text.trim(),
+          alamat: _buyerAddressController.text.trim(),
+          tanggal: _selectedDate!,
+          isPaid: _selectedPaymentStatus == 'Lunas',
+          quantities: quantities,
+        );
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Transaksi berhasil ditambahkan')),
+        );
+      }
+      
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
