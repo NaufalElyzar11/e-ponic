@@ -33,6 +33,41 @@ class AuthService {
     return credential.user;
   }
 
+  /// Login menggunakan email atau username & password.
+  /// Jika input adalah username, akan mencari email berdasarkan nama_pengguna di Firestore.
+  Future<User?> signInWithEmailOrUsername({
+    required String emailOrUsername,
+    required String password,
+  }) async {
+    String email = emailOrUsername.trim();
+    
+    // Cek apakah input adalah email (mengandung @) atau username
+    if (!email.contains('@')) {
+      // Jika tidak mengandung @, anggap sebagai username
+      // Cari user berdasarkan nama_pengguna di Firestore
+      final userQuery = await _firestore
+          .collection('pengguna')
+          .where('nama_pengguna', isEqualTo: email)
+          .limit(1)
+          .get();
+      
+      if (userQuery.docs.isEmpty) {
+        throw Exception('Username tidak ditemukan.');
+      }
+      
+      // Ambil email dari dokumen pengguna
+      final userData = userQuery.docs.first.data();
+      email = (userData['email'] ?? '') as String;
+      
+      if (email.isEmpty) {
+        throw Exception('Email tidak ditemukan untuk username ini.');
+      }
+    }
+    
+    // Login menggunakan email yang ditemukan
+    return signInWithEmail(email: email, password: password);
+  }
+
   /// Membuat akun karyawan baru.
   /// Hanya dipanggil dari Admin.
   Future<User?> createEmployeeAccount({
