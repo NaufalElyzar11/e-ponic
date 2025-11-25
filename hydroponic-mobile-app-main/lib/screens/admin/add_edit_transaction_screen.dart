@@ -312,7 +312,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                         child: Padding(
                           padding: EdgeInsetsGeometry.all(10),
                           child: Text(
-                            'Rp $_totalPrice',
+                            'Rp ${_totalPrice.toStringAsFixed(0)}',
                             style: TextStyle(color: Colors.white),
                           ),
                         ),

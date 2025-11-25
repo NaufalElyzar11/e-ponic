@@ -81,9 +81,11 @@ class _LogisticHomeScreenState extends State<LogisticHomeScreen> {
                   }
 
                   final allDocs = snapshot.data?.docs ?? [];
-                  // Tampilkan hanya transaksi yang belum ditugaskan
+                  // Tampilkan hanya transaksi yang sudah di-panen dan belum ditugaskan ke kurir
                   final docs = allDocs
-                      .where((d) => !(d.data()['is_assigned'] ?? false))
+                      .where((d) => 
+                          (d.data()['is_harvest'] ?? false) == true &&
+                          !(d.data()['is_assigned'] ?? false))
                       .toList();
 
                   if (docs.isEmpty) {
