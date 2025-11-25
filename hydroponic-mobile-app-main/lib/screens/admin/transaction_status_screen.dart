@@ -159,15 +159,8 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
                             );
                           }
                         },
-                        onAssign: () {
-                          if (model.id != null) {
-                            Navigator.pushNamed(
-                              context,
-                              '/logistic_assignment_detail',
-                              arguments: model.id!,
-                            );
-                          }
-                        },
+                        // onAssign dihapus karena transaksi otomatis muncul ke petani
+                        onAssign: null,
                       );
                     },
                     separatorBuilder: (BuildContext context, int index) {

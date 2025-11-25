@@ -91,7 +91,7 @@ class _TransactionStatusCardState extends State<TransactionStatusCard> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Total Harga:', style: TextStyle(color: Colors.white),),
-                Text('Rp ${widget.transaction.totalPrice}', style: TextStyle(color: Colors.white),)
+                Text('Rp ${widget.transaction.totalPrice.toStringAsFixed(0)}', style: TextStyle(color: Colors.white),)
               ],
             ),
 
@@ -161,13 +161,8 @@ class _TransactionStatusCardState extends State<TransactionStatusCard> {
             ),
             SizedBox(height: 15,),
 
-            StyledElevatedButton(
-              text: 'Tugaskan ', 
-              onPressed: widget.onAssign,
-              foregroundColor: AppColors.primary,
-              backgroundColor: Colors.white,
-              icon: Icons.assignment_add,
-            ),
+            // Tombol Tugaskan dihapus karena transaksi otomatis muncul ke petani
+            // Staf logistik hanya menugaskan kurir setelah petani selesai panen
             SizedBox(height: 10,),
 
             Row(
