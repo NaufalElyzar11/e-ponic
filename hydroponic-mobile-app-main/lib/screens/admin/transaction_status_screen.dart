@@ -94,8 +94,12 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
                       final dateStr = dt != null
                           ? DateFormat('dd MMM yyyy').format(dt)
                           : 'Tanggal tidak tersedia';
+                      
+                      // Gunakan created_at untuk waktu
+                      final createdTs = data['created_at'] as Timestamp?;
+                      final createdDt = createdTs?.toDate();
                       final timeStr =
-                          dt != null ? DateFormat('HH:mm').format(dt) : '';
+                          createdDt != null ? DateFormat('HH:mm').format(createdDt) : '';
 
                       final items =
                           (data['items'] as List<dynamic>? ?? <dynamic>[]);
