@@ -22,164 +22,175 @@ class CourierHomeScreen extends StatefulWidget{
 class _CourierHomeScreenState extends State<CourierHomeScreen> {
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    final authUser = FirebaseAuth.instance.currentUser;
 
-    if (user == null) {
+    if (authUser == null) {
       return const Scaffold(
         body: Center(child: Text('User tidak ditemukan, silakan login ulang')),
       );
     }
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(80),
-        child: HomeAppBar(
-          user: UserModel(
-            username: user.email ?? 'Kurir', 
-            role: 'Kurir',
-            onNotificationTap: () {
-              Navigator.pushNamed(context, '/notification');
-            },
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(vertical: 25, horizontal: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                'Daftar Pengiriman',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold
-                ),
+    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      future: FirebaseFirestore.instance
+          .collection('pengguna')
+          .doc(authUser.uid)
+          .get(),
+      builder: (context, userSnap) {
+        final uData = userSnap.data?.data() ?? {};
+        final name = (uData['nama_pengguna'] ?? authUser.email ??
+            'Kurir') as String;
+
+        return Scaffold(
+          backgroundColor: Colors.white,
+          appBar: PreferredSize(
+            preferredSize: const Size.fromHeight(80),
+            child: HomeAppBar(
+              user: UserModel(
+                username: name, 
+                role: 'Kurir',
+                onNotificationTap: () {
+                  Navigator.pushNamed(context, '/notification');
+                },
               ),
-              const SizedBox(height: 25,),
-              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream:
-                    ShippingService.instance.courierAssignmentsStream(user.uid),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+            ),
+          ),
+          body: SingleChildScrollView(
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(vertical: 25, horizontal: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    'Daftar Pengiriman',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold
+                    ),
+                  ),
+                  const SizedBox(height: 25,),
+                  StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                    stream:
+                        ShippingService.instance.courierAssignmentsStream(authUser.uid),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
 
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Text('Belum ada penugasan pengiriman.');
-                  }
+                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                        return const Text('Belum ada penugasan pengiriman.');
+                      }
 
-                  final shippingDocs = snapshot.data!.docs;
+                      final shippingDocs = snapshot.data!.docs;
 
-                  return ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: shippingDocs.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      final shipDoc = shippingDocs[index];
-                      final shipData = shipDoc.data();
-                      final transaksiId =
-                          (shipData['id_transaksi'] ?? '') as String;
+                      return ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: shippingDocs.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          final shipDoc = shippingDocs[index];
+                          final shipData = shipDoc.data();
+                          final transaksiId =
+                              (shipData['id_transaksi'] ?? '') as String;
 
-                      return FutureBuilder<
-                          DocumentSnapshot<Map<String, dynamic>>>(
-                        future: FirebaseFirestore.instance
-                            .collection('transaksi')
-                            .doc(transaksiId)
-                            .get(),
-                        builder: (context, txSnapshot) {
-                          if (txSnapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const SizedBox(
-                              height: 60,
-                              child: Center(
-                                  child: CircularProgressIndicator()),
-                            );
-                          }
+                          return FutureBuilder<
+                              DocumentSnapshot<Map<String, dynamic>>>(
+                            future: FirebaseFirestore.instance
+                                .collection('transaksi')
+                                .doc(transaksiId)
+                                .get(),
+                            builder: (context, txSnapshot) {
+                              if (txSnapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const SizedBox(
+                                  height: 60,
+                                  child: Center(
+                                      child: CircularProgressIndicator()),
+                                );
+                              }
 
-                          if (!txSnapshot.hasData ||
-                              !txSnapshot.data!.exists) {
-                            return const SizedBox();
-                          }
+                              if (!txSnapshot.hasData ||
+                                  !txSnapshot.data!.exists) {
+                                return const SizedBox();
+                              }
 
-                          final txData = txSnapshot.data!.data()!;
-                          final items =
-                              (txData['items'] as List<dynamic>? ??
-                                  <dynamic>[]);
+                              final txData = txSnapshot.data!.data()!;
+                              final items =
+                                  (txData['items'] as List<dynamic>? ??
+                                      <dynamic>[]);
 
-                          final plantQuantity = items.map((item) {
-                            final m = item as Map<String, dynamic>;
-                            final plant = PlantModel(
-                              plantName:
-                                  (m['nama_tanaman'] ?? '') as String,
-                              price: (m['harga'] as num?)?.toDouble() ??
-                                  0.0,
-                            );
-                            return PlantQuantityModel(
-                              plant: plant,
-                              quantity: (m['jumlah'] as int?) ?? 0,
-                            );
-                          }).toList();
+                              final plantQuantity = items.map((item) {
+                                final m = item as Map<String, dynamic>;
+                                final plant = PlantModel(
+                                  plantName:
+                                      (m['nama_tanaman'] ?? '') as String,
+                                  price: (m['harga'] as num?)?.toDouble() ??
+                                      0.0,
+                                );
+                                return PlantQuantityModel(
+                                  plant: plant,
+                                  quantity: (m['jumlah'] as int?) ?? 0,
+                                );
+                              }).toList();
 
-                          final txModel = TransactionModel(
-                            id: transaksiId,
-                            customerName:
-                                (txData['nama_pelanggan'] ?? '') as String,
-                            plantQuantity: plantQuantity,
-                            address: (txData['alamat'] ?? '') as String,
-                            date: '',
-                            time: '',
-                            isPaid: (txData['is_paid'] ?? false) as bool,
-                            isAssigned:
-                                (txData['is_assigned'] ?? false) as bool,
-                            isHarvest:
-                                (txData['is_harvest'] ?? false) as bool,
-                            isDeliver:
-                                (txData['is_deliver'] ?? false) as bool,
-                          );
+                              final txModel = TransactionModel(
+                                id: transaksiId,
+                                customerName:
+                                    (txData['nama_pelanggan'] ?? '') as String,
+                                plantQuantity: plantQuantity,
+                                address: (txData['alamat'] ?? '') as String,
+                                date: '',
+                                time: '',
+                                isPaid: (txData['is_paid'] ?? false) as bool,
+                                isAssigned:
+                                    (txData['is_assigned'] ?? false) as bool,
+                                isHarvest:
+                                    (txData['is_harvest'] ?? false) as bool,
+                                isDeliver:
+                                    (txData['is_deliver'] ?? false) as bool,
+                              );
 
-                          final assignment = DeliveryAssigntmentModel(
-                            transaction: txModel,
-                            courier: UserModel(
-                              username:
-                                  user.email ?? 'Kurir', // display only
-                              role: 'Kurir',
-                              onNotificationTap: () {},
-                            ),
-                            isDone: (shipData['status_pengiriman'] ??
-                                        '') ==
-                                    'Selesai',
-                          );
+                              final assignment = DeliveryAssigntmentModel(
+                                transaction: txModel,
+                                courier: UserModel(
+                                  username: name, // display only
+                                  role: 'Kurir',
+                                  onNotificationTap: () {},
+                                ),
+                                isDone: (shipData['status_pengiriman'] ??
+                                            '') ==
+                                        'Selesai',
+                              );
 
-                          return DeliveryAssignmentCard(
-                            assignment: assignment,
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/courier_delivery_detail',
-                                arguments: {
-                                  'shippingId': shipDoc.id,
-                                  'assignment': assignment,
+                              return DeliveryAssignmentCard(
+                                assignment: assignment,
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/courier_delivery_detail',
+                                    arguments: {
+                                      'shippingId': shipDoc.id,
+                                      'assignment': assignment,
+                                    },
+                                  );
                                 },
                               );
                             },
                           );
                         },
+                        separatorBuilder:
+                            (BuildContext context, int index) {
+                          return const SizedBox(height: 7);
+                        },
                       );
                     },
-                    separatorBuilder:
-                        (BuildContext context, int index) {
-                      return const SizedBox(height: 7);
-                    },
-                  );
-                },
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

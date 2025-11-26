@@ -72,16 +72,17 @@ class NotificationService {
 
     for (final doc in newTransactions.docs) {
       final data = doc.data();
-      final tanggal = (data['tanggal'] as Timestamp?)?.toDate() ?? DateTime.now();
+      // Gunakan created_at untuk waktu yang benar
+      final createdAt = (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
       final namaPelanggan = (data['nama_pelanggan'] ?? 'Pelanggan') as String;
       
       notifications.add({
         'id': 'transaksi_${doc.id}',
         'title': 'Transaksi Baru',
         'body': 'Transaksi dari $namaPelanggan menunggu panen',
-        'date': DateFormat('dd MMMM yyyy', 'id_ID').format(tanggal),
-        'time': DateFormat('HH:mm', 'id_ID').format(tanggal),
-        'timestamp': tanggal,
+        'date': DateFormat('dd MMMM yyyy', 'id_ID').format(createdAt),
+        'time': DateFormat('HH:mm', 'id_ID').format(createdAt),
+        'timestamp': createdAt,
         'type': 'transaction',
         'referenceId': doc.id,
         'isRead': false,
@@ -329,7 +330,8 @@ class NotificationService {
 
     for (final doc in assignments.docs) {
       final data = doc.data();
-      final tanggalPengiriman = (data['tanggal_pengiriman'] as Timestamp?)?.toDate() ?? DateTime.now();
+      // Gunakan created_at untuk waktu yang benar
+      final createdAt = (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
       final status = (data['status_pengiriman'] ?? 'Belum Dikirim') as String;
       final transaksiId = (data['id_transaksi'] ?? '') as String;
       
@@ -358,9 +360,9 @@ class NotificationService {
         'id': 'kurir_${doc.id}',
         'title': title,
         'body': body,
-        'date': DateFormat('dd MMMM yyyy', 'id_ID').format(tanggalPengiriman),
-        'time': DateFormat('HH:mm', 'id_ID').format(tanggalPengiriman),
-        'timestamp': tanggalPengiriman,
+        'date': DateFormat('dd MMMM yyyy', 'id_ID').format(createdAt),
+        'time': DateFormat('HH:mm', 'id_ID').format(createdAt),
+        'timestamp': createdAt,
         'type': 'delivery',
         'referenceId': doc.id,
         'isRead': false,
