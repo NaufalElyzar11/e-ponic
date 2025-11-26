@@ -246,7 +246,7 @@ class _EmployeeAccountListScreenState extends State<EmployeeAccountListScreen> {
         // Untuk performa cepat, kita tampilkan ID atau string kosong dulu, 
         // atau fetch nama tanaman secara paralel jika perlu. 
         // Di sini kita ambil ID Tanaman saja atau logic sederhana.
-        String infoTanaman = '-';
+        String infoTanaman = 'Tidak ada';
         if (data['posisi'] == 'Petani' && data['id_tanaman'] != null) {
            // Untuk laporan cepat, kita tulis "Ada ID Tanaman" atau fetch namanya
            // Kita biarkan ID-nya atau label generic agar tidak terlalu lama loading
@@ -255,9 +255,9 @@ class _EmployeeAccountListScreenState extends State<EmployeeAccountListScreen> {
 
         tableData.add([
           i.toString(),
-          (data['nama_pengguna'] ?? '-').toString(),
-          (data['email'] ?? '-').toString(),
-          (data['posisi'] ?? '-').toString(),
+          (data['nama_pengguna'] ?? 'Tidak ada nama').toString(),
+          (data['email'] ?? 'Tidak ada email').toString(),
+          (data['posisi'] ?? 'Tidak ada posisi').toString(),
           infoTanaman,
         ]);
         i++;

@@ -47,14 +47,8 @@ class MaintenanceDetailCard extends StatelessWidget{
             ),
             SizedBox(height: 20,),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                IconButton(
-                  onPressed: () {
-                    // actions
-                  }, 
-                  icon: Icon(Icons.camera_enhance, color: Colors.white,)
-                ),
                 ElevatedButton(
                   onPressed: onMarkDone,
                   style: ElevatedButton.styleFrom(

@@ -83,21 +83,6 @@ class _LogisticDeliveryStatusCardState extends State<LogisticDeliveryStatusCard>
                 SizedBox(height: 20,),
 
                 Text(widget.assignment.transaction.address, textAlign: TextAlign.justify,),
-                SizedBox(height: 20,),
-
-                Column(
-                  children: [
-                    StyledElevatedButton(
-                      text: 'Lihat Bukti ',
-                      icon: Icons.camera_alt,
-                      onPressed: () {},
-                      foregroundColor: Colors.white,
-                      backgroundColor: AppColors.primary,
-                      borderWidth: 2,
-                      borderColor: Colors.white54,
-                    ),
-                  ],
-                )
               ]),
             ),
           )

@@ -55,13 +55,18 @@ class FarmerHistoryExpansionItem extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           IconButton(
-                            onPressed: history.onPlantEdit, 
-                            icon: Icon(Icons.edit, color: Colors.white,)
+                            onPressed: () {
+                              print('🖊️ Edit plant button clicked');
+                              history.onPlantEdit();
+                            }, 
+                            icon: Icon(Icons.edit, color: Colors.white,),
+                            tooltip: 'Edit Data Tanam',
                           ),
                           SizedBox(width: 10,),
                           IconButton(
                             onPressed: history.onPlantDelete, 
-                            icon: Icon(Icons.delete, color: Colors.white,)
+                            icon: Icon(Icons.delete, color: Colors.white,),
+                            tooltip: 'Hapus Data Tanam',
                           ),
                       ],)),
                     ]),
@@ -77,13 +82,18 @@ class FarmerHistoryExpansionItem extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           IconButton(
-                            onPressed: history.onHarvestEdit, 
-                            icon: Icon(Icons.edit, color: Colors.white,)
+                            onPressed: () {
+                              print('🖊️ Edit harvest button clicked');
+                              history.onHarvestEdit();
+                            }, 
+                            icon: Icon(Icons.edit, color: Colors.white,),
+                            tooltip: 'Edit Data Panen',
                           ),
                           SizedBox(width: 10,),
                           IconButton(
                             onPressed: history.onHarvestDelete, 
-                            icon: Icon(Icons.delete, color: Colors.white,)
+                            icon: Icon(Icons.delete, color: Colors.white,),
+                            tooltip: 'Hapus Data Panen',
                           ),
                       ],)),
                     ]),
@@ -92,6 +102,58 @@ class FarmerHistoryExpansionItem extends StatelessWidget {
               ),
             ),
             SizedBox(height: 15,),
+            // Tombol Edit Data
+            if (history.plantQty > 0 || history.harvestQty > 0)
+              StyledElevatedButton(
+                text: 'Edit Data', 
+                onPressed: () {
+                  // Jika ada data tanam dan panen, tampilkan dialog untuk memilih
+                  if (history.plantQty > 0 && history.harvestQty > 0) {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Pilih Data yang Akan Diedit'),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (history.plantQty > 0)
+                              ListTile(
+                                leading: const Icon(Icons.eco),
+                                title: const Text('Edit Data Tanam'),
+                                subtitle: Text('${history.plantQty} bibit'),
+                                onTap: () {
+                                  Navigator.pop(ctx);
+                                  history.onPlantEdit();
+                                },
+                              ),
+                            if (history.harvestQty > 0)
+                              ListTile(
+                                leading: const Icon(Icons.agriculture),
+                                title: const Text('Edit Data Panen'),
+                                subtitle: Text('${history.harvestQty} panen'),
+                                onTap: () {
+                                  Navigator.pop(ctx);
+                                  history.onHarvestEdit();
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  } else if (history.plantQty > 0) {
+                    // Hanya ada data tanam
+                    history.onPlantEdit();
+                  } else if (history.harvestQty > 0) {
+                    // Hanya ada data panen
+                    history.onHarvestEdit();
+                  }
+                },
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.blue[700],
+                icon: Icons.edit,
+              ),
+            SizedBox(height: 10,),
+            // Tombol Hapus Data
             StyledElevatedButton(
               text: 'Hapus Data', 
               onPressed: history.onDeleteAll,

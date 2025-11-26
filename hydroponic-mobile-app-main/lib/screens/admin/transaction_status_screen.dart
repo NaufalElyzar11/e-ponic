@@ -93,7 +93,7 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
                       final dt = ts?.toDate();
                       final dateStr = dt != null
                           ? DateFormat('dd MMM yyyy').format(dt)
-                          : '-';
+                          : 'Tanggal tidak tersedia';
                       final timeStr =
                           dt != null ? DateFormat('HH:mm').format(dt) : '';
 
@@ -242,13 +242,15 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
         
         // Format Tanggal
         final ts = data['tanggal'] as Timestamp?;
-        final dateStr = ts != null ? DateFormat('dd/MM/yy').format(ts.toDate()) : '-';
+        final dateStr = ts != null ? DateFormat('dd/MM/yy').format(ts.toDate()) : 'Tanggal tidak tersedia';
 
         // Format Item (Misal: Selada(2), Pakcoy(1))
         final items = (data['items'] as List<dynamic>? ?? []);
-        String itemsStr = items.map((i) {
-          return "${i['nama_tanaman']}(${i['jumlah']})";
-        }).join(', ');
+        String itemsStr = items.isEmpty 
+            ? 'Tidak ada item' 
+            : items.map((i) {
+                return "${i['nama_tanaman'] ?? 'Tanaman'}(${i['jumlah'] ?? 0})";
+              }).join(', ');
 
         // Format Status
         final isPaid = (data['is_paid'] ?? false) ? 'Lunas' : 'Belum';
@@ -257,8 +259,8 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
 
         tableData.add([
           dateStr,
-          (data['nama_pelanggan'] ?? '-').toString(),
-          (data['alamat'] ?? '-').toString(),
+          (data['nama_pelanggan'] ?? 'Tidak ada nama').toString(),
+          (data['alamat'] ?? 'Tidak ada alamat').toString(),
           itemsStr,
           'Rp $total',
           isPaid,

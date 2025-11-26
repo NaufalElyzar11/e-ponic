@@ -143,46 +143,8 @@ class DeliveryDetailCard extends StatelessWidget {
             // Tombol hanya muncul jika belum selesai
             if (!isSelesai) ...[
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  IconButton(
-                    onPressed: () async {
-                      final controller = TextEditingController();
-                      await showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Catatan Pengiriman'),
-                          content: TextField(
-                            controller: controller,
-                            decoration: const InputDecoration(
-                              hintText: 'Tulis catatan (opsional)',
-                            ),
-                            maxLines: 3,
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: const Text('Batal'),
-                            ),
-                            TextButton(
-                              onPressed: () async {
-                                await ShippingService.instance
-                                    .updateDeliveryStatus(
-                                  shippingId: shippingId,
-                                  statusPengiriman: 'Dalam Perjalanan',
-                                  catatan: controller.text.trim(),
-                                );
-                                // ignore: use_build_context_synchronously
-                                Navigator.pop(ctx);
-                              },
-                              child: const Text('Simpan'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    icon: Icon(Icons.camera_enhance, color: Colors.white,)
-                  ),
                   ElevatedButton(
                     onPressed: () async {
                       final controller = TextEditingController();

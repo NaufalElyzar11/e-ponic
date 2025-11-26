@@ -371,7 +371,7 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
       // Siapkan Tabel Ringkasan untuk PDF
       final List<List<String>> summaryTable = [['Tanaman', 'Total Tanam', 'Total Panen', 'Siap Panen (Sisa)']];
       summaryData.forEach((id, val) {
-        final name = plantNames[id] ?? '-';
+        final name = plantNames[id] ?? 'Tanaman tidak diketahui';
         final t = val['tanam']!;
         final p = val['panen']!;
         final sisa = t - p;
@@ -388,7 +388,7 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
           historyList.add({
             'date': ts.toDate(),
             'type': 'Tanam',
-            'plant': plantNames[doc.data()['id_tanaman']] ?? '-',
+            'plant': plantNames[doc.data()['id_tanaman']] ?? 'Tanaman tidak diketahui',
             'qty': doc.data()['jumlah_tanam'] ?? 0,
           });
         }
@@ -401,7 +401,7 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
           historyList.add({
             'date': ts.toDate(),
             'type': 'Panen',
-            'plant': pid != null ? (plantNames[pid] ?? '-') : 'Panen (Umum)',
+            'plant': pid != null ? (plantNames[pid] ?? 'Tanaman tidak diketahui') : 'Panen (Umum)',
             'qty': doc.data()['jumlah_panen'] ?? 0,
           });
         }
