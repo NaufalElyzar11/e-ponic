@@ -36,7 +36,7 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> {
         preferredSize: const Size.fromHeight(80),
         child: HomeAppBar(
           user: UserModel(
-            username: user.displayName ?? 'Kurir', 
+            username: user.email ?? 'Kurir', 
             role: 'Kurir',
             onNotificationTap: () {
               Navigator.pushNamed(context, '/notification');
