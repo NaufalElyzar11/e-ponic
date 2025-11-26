@@ -58,7 +58,23 @@ class _LogisticDeliveryStatusCardState extends State<LogisticDeliveryStatusCard>
               ),
               subtitle: Column(children: [
                 Divider(),
-                SizedBox(height: 25,),
+                SizedBox(height: 15,),
+                
+                // Nama Kurir
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Kurir:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      widget.assignment.courier.username,
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 20,),
                 
                 Column(
                   children: widget.assignment.transaction.plantQuantity.map((transaction) {
