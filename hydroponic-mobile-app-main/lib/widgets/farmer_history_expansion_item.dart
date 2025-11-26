@@ -40,7 +40,6 @@ class FarmerHistoryExpansionItem extends StatelessWidget {
                   columns: [
                     DataColumn(label: Text('Informasi')),
                     DataColumn(label: Text('Jumlah'), headingRowAlignment: MainAxisAlignment.center),
-                    DataColumn(label: Text('Menu'), headingRowAlignment: MainAxisAlignment.center),
                   ],
                   rows: [
                     DataRow(cells: [
@@ -51,24 +50,24 @@ class FarmerHistoryExpansionItem extends StatelessWidget {
                           Text('${history.plantQty}', textAlign: TextAlign.center,)
                         ]
                       )),
-                      DataCell(Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          IconButton(
-                            onPressed: () {
-                              print('🖊️ Edit plant button clicked');
-                              history.onPlantEdit();
-                            }, 
-                            icon: Icon(Icons.edit, color: Colors.white,),
-                            tooltip: 'Edit Data Tanam',
-                          ),
-                          SizedBox(width: 10,),
-                          IconButton(
-                            onPressed: history.onPlantDelete, 
-                            icon: Icon(Icons.delete, color: Colors.white,),
-                            tooltip: 'Hapus Data Tanam',
-                          ),
-                      ],)),
+                      // DataCell(Row(
+                      //   mainAxisAlignment: MainAxisAlignment.center,
+                      //   children: [
+                      //     IconButton(
+                      //       onPressed: () {
+                      //         print('🖊️ Edit plant button clicked');
+                      //         history.onPlantEdit();
+                      //       }, 
+                      //       icon: Icon(Icons.edit, color: Colors.white,),
+                      //       tooltip: 'Edit Data Tanam',
+                      //     ),
+                      //     SizedBox(width: 10,),
+                      //     IconButton(
+                      //       onPressed: history.onPlantDelete, 
+                      //       icon: Icon(Icons.delete, color: Colors.white,),
+                      //       tooltip: 'Hapus Data Tanam',
+                      //     ),
+                      // ],)),
                     ]),
                     DataRow(cells: [
                       DataCell(Text('Tanaman yang dipanen')),
@@ -78,24 +77,24 @@ class FarmerHistoryExpansionItem extends StatelessWidget {
                           Text('${history.harvestQty}', textAlign: TextAlign.center,)
                         ]
                       )),
-                      DataCell(Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          IconButton(
-                            onPressed: () {
-                              print('🖊️ Edit harvest button clicked');
-                              history.onHarvestEdit();
-                            }, 
-                            icon: Icon(Icons.edit, color: Colors.white,),
-                            tooltip: 'Edit Data Panen',
-                          ),
-                          SizedBox(width: 10,),
-                          IconButton(
-                            onPressed: history.onHarvestDelete, 
-                            icon: Icon(Icons.delete, color: Colors.white,),
-                            tooltip: 'Hapus Data Panen',
-                          ),
-                      ],)),
+                      // DataCell(Row(
+                      //   mainAxisAlignment: MainAxisAlignment.center,
+                      //   children: [
+                      //     IconButton(
+                      //       onPressed: () {
+                      //         print('🖊️ Edit harvest button clicked');
+                      //         history.onHarvestEdit();
+                      //       }, 
+                      //       icon: Icon(Icons.edit, color: Colors.white,),
+                      //       tooltip: 'Edit Data Panen',
+                      //     ),
+                      //     SizedBox(width: 10,),
+                      //     IconButton(
+                      //       onPressed: history.onHarvestDelete, 
+                      //       icon: Icon(Icons.delete, color: Colors.white,),
+                      //       tooltip: 'Hapus Data Panen',
+                      //     ),
+                      // ],)),
                     ]),
                   ],
                 ),
@@ -105,7 +104,7 @@ class FarmerHistoryExpansionItem extends StatelessWidget {
             // Tombol Edit Data
             if (history.plantQty > 0 || history.harvestQty > 0)
               StyledElevatedButton(
-                text: 'Edit Data', 
+                text: 'Edit Data ',
                 onPressed: () {
                   // Jika ada data tanam dan panen, tampilkan dialog untuk memilih
                   if (history.plantQty > 0 && history.harvestQty > 0) {
