@@ -53,15 +53,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       LogRegHeader(title: "MASUK", subtitle: "Selamat Datang"),
                       _gap(),
 
-                      // Email Field (digunakan sebagai akun login)
+                      // Email atau Username Field
                       StyledTextFormField(
                         controller: _emailController,
-                        labelText: 'Email',
-                        hintText: 'Masukkan email karyawan Anda',
+                        labelText: 'Email atau Username',
+                        hintText: 'Masukkan email atau username Anda',
                         prefixIcon: Icons.person,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Silakan masukkan email Anda';
+                            return 'Silakan masukkan email atau username Anda';
                           }
                           return null;
                         },
@@ -167,8 +167,8 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final user = await AuthService.instance.signInWithEmail(
-        email: _emailController.text.trim(),
+      final user = await AuthService.instance.signInWithEmailOrUsername(
+        emailOrUsername: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
@@ -202,6 +202,9 @@ class _LoginScreenState extends State<LoginScreen> {
           break;
         case 'Admin':
           route = '/admin_navigation';
+          break;
+        case 'Super Admin':
+          route = '/superadmin_navigation';
           break;
         default:
           route = '/login';

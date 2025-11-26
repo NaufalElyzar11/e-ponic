@@ -10,6 +10,7 @@ import 'package:hydroponics_app/widgets/home_app_bar.dart';
 import 'package:hydroponics_app/widgets/maintenance_schedule_card.dart';
 import 'package:hydroponics_app/widgets/styled_elevated_button.dart';
 import 'package:hydroponics_app/services/auth_service.dart';
+import 'package:hydroponics_app/services/alarm_service.dart';
 
 class FarmerHomeScreen extends StatefulWidget {
   const FarmerHomeScreen({super.key});
@@ -387,7 +388,8 @@ class _FarmerHomeContent extends StatelessWidget {
                                       calculateNextDate(intervalBersih, baseDate);
 
                                   final List<PlantMaintenanceModel> schedules = [];
-                                  
+                                  final List<Map<String, dynamic>> alarmData = []; // Untuk menyimpan data alarm
+                              
                                   bool isToday(DateTime date) {
                                     final now = DateTime.now();
                                     return date.year == now.year &&
@@ -407,6 +409,14 @@ class _FarmerHomeContent extends StatelessWidget {
                                     final key =
                                         '${field}_${DateFormat('yyyy-MM-dd').format(date.toLocal())}_$specificTanamId';
                                     final isDone = statusMap[key] ?? false;
+
+                                // Simpan data untuk alarm
+                                alarmData.add({
+                                  'id': schedules.length + 1,
+                                  'title': title,
+                                  'body': description,
+                                  'date': date,
+                                });
 
                                     schedules.add(
                                       PlantMaintenanceModel(
@@ -493,6 +503,13 @@ class _FarmerHomeContent extends StatelessWidget {
                                     }
                                   }
 
+                              // Schedule alarm untuk semua jadwal hari ini (async, tidak blocking UI)
+                              if (alarmData.isNotEmpty) {
+                                _scheduleAlarmsAsync(alarmData);
+                              } else {
+                                print('ℹ️ No alarms to schedule (no schedules for today)');
+                              }
+
                                   if (schedules.isEmpty) {
                                     return Container(
                                       padding: const EdgeInsets.all(15),
@@ -510,15 +527,100 @@ class _FarmerHomeContent extends StatelessWidget {
                                     );
                                   }
 
-                                  return ListView.builder(
-                                    shrinkWrap: true,
-                                    physics: const NeverScrollableScrollPhysics(),
-                                    itemCount: schedules.length,
-                                    itemBuilder: (BuildContext context, int index) {
-                                      return MaintenanceScheduleCard(
-                                        maintenance: schedules[index],
-                                      );
-                                    },
+                                  return Column(
+                                children: [
+                                  // Tombol Test Alarm (untuk testing)
+                                  Column(
+                                    children: [
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: StyledElevatedButton(
+                                          text: 'Test Alarm (1 menit)',
+                                          onPressed: () async {
+                                            if (schedules.isEmpty) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(content: Text('Tidak ada jadwal untuk di-test')),
+                                              );
+                                              return;
+                                            }
+                                            final firstSchedule = schedules.first;
+                                            try {
+                                              await AlarmService.instance.testAlarm(
+                                                title: firstSchedule.maintenanceName,
+                                                body: firstSchedule.description,
+                                              );
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text('Test alarm dijadwalkan 1 menit dari sekarang'),
+                                                  duration: Duration(seconds: 2),
+                                                ),
+                                              );
+                                            } catch (e) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text('Error: $e'),
+                                                  duration: const Duration(seconds: 3),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                          foregroundColor: Colors.white,
+                                          backgroundColor: Colors.orange,
+                                          icon: Icons.alarm,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: StyledElevatedButton(
+                                          text: 'Test Notifikasi',
+                                          onPressed: () async {
+                                            if (schedules.isEmpty) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(content: Text('Tidak ada jadwal untuk di-test')),
+                                              );
+                                              return;
+                                            }
+                                            final firstSchedule = schedules.first;
+                                            try {
+                                              await AlarmService.instance.showNotificationNow(
+                                                title: firstSchedule.maintenanceName,
+                                                body: firstSchedule.description,
+                                              );
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text('Notifikasi ditampilkan sekarang'),
+                                                  duration: Duration(seconds: 2),
+                                                ),
+                                              );
+                                            } catch (e) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text('Error: $e'),
+                                                  duration: const Duration(seconds: 3),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                          foregroundColor: Colors.white,
+                                          backgroundColor: Colors.green,
+                                          icon: Icons.notifications_active,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  ListView.builder(
+                                        shrinkWrap: true,
+                                        physics: const NeverScrollableScrollPhysics(),
+                                        itemCount: schedules.length,
+                                        itemBuilder: (BuildContext context, int index) {
+                                          return MaintenanceScheduleCard(
+                                            maintenance: schedules[index],
+                                          );
+                                        },
+                                  ),
+                                ],
                                   );
                                 },
                               );
@@ -534,6 +636,23 @@ class _FarmerHomeContent extends StatelessWidget {
         );
       },
     );
+  }
+
+  /// Schedule alarm secara async (tidak blocking UI)
+  void _scheduleAlarmsAsync(List<Map<String, dynamic>> alarmData) {
+    print('📅 Scheduling ${alarmData.length} alarms for today...');
+    AlarmService.instance.scheduleTodayAlarms(
+      schedules: alarmData,
+      isTestMode: false,
+    ).then((_) {
+      print('✅ All alarms scheduled successfully');
+      // Debug: Tampilkan pending notifications
+      AlarmService.instance.getPendingNotifications().then((pending) {
+        print('📋 Total pending notifications: ${pending.length}');
+      });
+    }).catchError((e) {
+      print('❌ Error scheduling alarms: $e');
+    });
   }
 }
 

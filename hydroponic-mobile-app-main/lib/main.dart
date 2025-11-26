@@ -20,6 +20,8 @@ import 'package:hydroponics_app/screens/logistic/logistic_navigation.dart';
 import 'package:hydroponics_app/screens/notification_screen.dart';
 import 'package:hydroponics_app/screens/register_screen.dart';
 import 'package:hydroponics_app/screens/select_role_screen.dart';
+import 'package:hydroponics_app/screens/superadmin/superadmin_navigation.dart';
+import 'package:hydroponics_app/services/alarm_service.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -27,6 +29,8 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  // Initialize alarm service
+  await AlarmService.instance.initialize();
   runApp(const HydroponicApp());
 }
 
@@ -60,6 +64,7 @@ class HydroponicApp extends StatelessWidget {
         '/plant_status': (context) => const PlantStatusScreen(),
         '/logistic_navigation': (context) => const LogisticNavigation(),
         '/logistic_assignment_detail': (context) => const LogisticAssignmentDetailScreen(),
+        '/superadmin_navigation': (context) => const SuperAdminNavigation(),
       },
     );
   }
@@ -121,6 +126,8 @@ class _AuthWrapper extends StatelessWidget {
                 return const LogisticNavigation();
               case 'Admin':
                 return const AdminNavigation();
+              case 'Super Admin':
+                return const SuperAdminNavigation();
               default:
                 return const LoginScreen();
             }
