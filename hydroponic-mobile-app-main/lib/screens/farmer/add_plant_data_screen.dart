@@ -54,7 +54,7 @@ class _AddPlantDataScreenState extends State<AddPlantDataScreen>{
           onPressed: () {
             Navigator.pop(context);
           }, 
-          icon: Icon(Icons.arrow_back)
+          icon: const Icon(Icons.arrow_back)
         ),
         title: const Text('Tambah Data Tanaman', style: TextStyle(fontWeight: FontWeight.bold),),
         titleSpacing: 10,
@@ -64,11 +64,11 @@ class _AddPlantDataScreenState extends State<AddPlantDataScreen>{
       body: Form(
         key: _formKey,
         child: Container(
-          padding: EdgeInsets.all(20),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Jumlah bibit:',
+              const Text('Jumlah bibit:',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold
@@ -87,19 +87,24 @@ class _AddPlantDataScreenState extends State<AddPlantDataScreen>{
                 },
               ),
               _gap(15),
-              Text('Tanggal Tanam:',
+              const Text('Tanggal Tanam:',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold
                 ),
               ),
               _gap(10),
+              
+              // PERUBAHAN DI SINI
               StyledDatePickerField(
                 controller: _dateController,
+                // Batasi tanggal terakhir ke Waktu Sekarang (Hari Ini)
+                lastDate: DateTime.now(), 
                 onDateSelected: (date) {
                   _selectedDate = date;
                 },
               ),
+              
               _gap(20),
               StyledElevatedButton(
                 text: 'Tambah Data', 

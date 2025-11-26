@@ -5,11 +5,13 @@ import 'package:intl/intl.dart';
 class StyledDatePickerField extends StatefulWidget {
   final TextEditingController? controller;
   final ValueChanged<DateTime?>? onDateSelected;
+  final DateTime? lastDate; // Parameter baru untuk batas akhir tanggal
 
   const StyledDatePickerField({
     super.key,
     this.controller,
     this.onDateSelected,
+    this.lastDate, // Tambahkan ke constructor
   });
 
   @override
@@ -17,7 +19,6 @@ class StyledDatePickerField extends StatefulWidget {
 }
 
 class _StyledDatePickerFieldState extends State<StyledDatePickerField> {
-  // Controller untuk mengelola teks di dalam TextFormField
   late final TextEditingController _dateController;
 
   @override
@@ -26,21 +27,29 @@ class _StyledDatePickerFieldState extends State<StyledDatePickerField> {
     _dateController = widget.controller ?? TextEditingController();
   }
 
-  // Fungsi untuk menampilkan date picker
   Future<void> _selectDate(BuildContext context) async {
+    final now = DateTime.now();
+    // Gunakan widget.lastDate jika ada, jika tidak gunakan default 2101
+    final effectiveLastDate = widget.lastDate ?? DateTime(2101);
+
+    // Pastikan initialDate tidak melebihi lastDate untuk mencegah error
+    // Jika 'sekarang' lebih besar dari batas akhir, gunakan batas akhir sebagai awal
+    DateTime initialDate = now;
+    if (initialDate.isAfter(effectiveLastDate)) {
+      initialDate = effectiveLastDate;
+    }
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(), // Tanggal awal yang dipilih
-      firstDate: DateTime(2000),   // Tanggal paling awal yang bisa dipilih
-      lastDate: DateTime(2101),    // Tanggal paling akhir yang bisa dipilih
+      initialDate: initialDate, 
+      firstDate: DateTime(2000),   
+      lastDate: effectiveLastDate, // Gunakan batas akhir yang dinamis
     );
 
     if (picked != null) {
-      // Jika pengguna memilih tanggal
       setState(() {
-        // Format tanggal menggunakan package intl
         String formattedDate = DateFormat('dd-MM-yyyy').format(picked);
-        _dateController.text = formattedDate; // Set teks di controller
+        _dateController.text = formattedDate;
       });
       widget.onDateSelected?.call(picked);
     }
@@ -48,51 +57,46 @@ class _StyledDatePickerFieldState extends State<StyledDatePickerField> {
 
   @override
   void dispose() {
-    // Hanya dispose jika controller dibuat di dalam widget
     if (widget.controller == null) {
-      _dateController.dispose(); // Selalu dispose controller!
+      _dateController.dispose();
     }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return 
-      TextFormField(
-        controller: _dateController, // 1. Gunakan controller
-        readOnly: true,              // 2. Buat read-only
-        onTap: () {
-          _selectDate(context);      // 3. Panggil date picker saat di-tap
-        },
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            // Ubah pesan validasi agar sesuai
-            return 'Silakan pilih tanggal';
-          }
-          return null;
-        },
-        // 4. DEKORASI ANDA (dicopy-paste, hanya ubah hintText)
-        decoration: InputDecoration(
-          hintText: 'Pilih tanggal', // Ubah hint text
-          filled: true,
-          fillColor: Color.fromARGB(255, 236, 236, 236),
-          // Tambahkan icon agar lebih jelas
-          suffixIcon: Icon(Icons.calendar_today_outlined),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(15)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(style: BorderStyle.none),
-            borderRadius: BorderRadius.all(Radius.circular(15)),
-          ),
-          focusedBorder: OutlineInputBorder(
+    return TextFormField(
+      controller: _dateController,
+      readOnly: true,
+      onTap: () {
+        _selectDate(context);
+      },
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Silakan pilih tanggal';
+        }
+        return null;
+      },
+      decoration: const InputDecoration( // Saya tambahkan const untuk optimasi
+        hintText: 'Pilih tanggal',
+        filled: true,
+        fillColor: Color.fromARGB(255, 236, 236, 236),
+        suffixIcon: Icon(Icons.calendar_today_outlined),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(15)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(style: BorderStyle.none),
+          borderRadius: BorderRadius.all(Radius.circular(15)),
+        ),
+        focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(15)),
           borderSide: BorderSide(
             color: AppColors.primary,
             width: 2.0
           )
         )
-        ),
-      );
+      ),
+    );
   }
 }
