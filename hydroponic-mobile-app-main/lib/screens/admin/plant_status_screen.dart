@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; // Pastikan intl di-import
+import 'package:intl/intl.dart'; 
 
-// Import package pdf & printing
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -20,7 +19,7 @@ class PlantStatusScreen extends StatefulWidget{
 }
 
 class _PlantStatusScreenState extends State<PlantStatusScreen> {
-  bool _isExporting = false; // State untuk loading
+  bool _isExporting = false; 
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +48,6 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(15),
                   child: StyledElevatedButton(
-                    // Update logika tombol
                     text: _isExporting ? 'Memproses...' : 'Ekspor Laporan (PDF)', 
                     onPressed: _isExporting ? null : _exportToPdf,
                     foregroundColor: AppColors.primary,
@@ -67,7 +65,7 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
     );
   }
 
-  // ... _buildReadyToHarvestSection ... (Tidak ada perubahan kode di widget ini)
+  // --- PERBAIKAN 1: Mengambil masa_tanam dari dokumen ---
   Widget _buildReadyToHarvestSection() {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance.collection('tanaman').snapshots(),
@@ -95,19 +93,26 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
                   children: docs.map((doc) {
                     final data = doc.data();
                     final nama = (data['nama_tanaman'] ?? '') as String;
+                    
+                    // Ambil masa tanam (default 0 jika tidak ada)
+                    final int masaTanam = (data['masa_tanam'] ?? 0) as int;
+
                     return FutureBuilder<Map<String, int>>(
-                      future: _aggregateForPlant(doc.id),
+                      // Kirim masaTanam ke fungsi helper
+                      future: _aggregateForPlant(doc.id, masaTanam),
                       builder: (context, aggSnap) {
-                        final plantTotal =
-                            aggSnap.data?['tanam'] ?? 0;
-                        final harvestTotal =
-                            aggSnap.data?['panen'] ?? 0;
+                        // Data default
+                        final stokSaatIni = aggSnap.data?['stock'] ?? 0;
+                        final siapPanen = aggSnap.data?['ready'] ?? 0;
+                        
                         return Padding(
                           padding: const EdgeInsets.only(right: 10),
                           child: PlantHarvestCard(
                             plantName: nama,
-                            plantHarvestQty: harvestTotal,
-                            plantTotalQty: plantTotal,
+                            // plantHarvestQty: Total yang SUDAH MATANG (siap panen)
+                            plantHarvestQty: siapPanen,
+                            // plantTotalQty: Sisa tanaman yang ada di kebun (hidup)
+                            plantTotalQty: stokSaatIni,
                           ),
                         );
                       },
@@ -122,7 +127,71 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
     );
   }
 
-  // ... _buildHistorySection ... (Tidak ada perubahan kode di widget ini)
+  // --- PERBAIKAN 2: Logika Perhitungan ---
+  Future<Map<String, int>> _aggregateForPlant(String plantId, int masaTanam) async {
+    int totalTanamSemua = 0;
+    int totalTanamMatang = 0; // Yang usianya >= masa_tanam
+    int totalPanen = 0;
+
+    final now = DateTime.now();
+
+    // 1. Ambil Data Tanam
+    final tanamSnap = await FirebaseFirestore.instance
+        .collection('data_tanam')
+        .where('id_tanaman', isEqualTo: plantId)
+        .get();
+    
+    for (final doc in tanamSnap.docs) {
+      final jumlah = (doc.data()['jumlah_tanam'] as int? ?? 0);
+      final Timestamp? ts = doc.data()['tanggal_tanam'] as Timestamp?;
+      
+      // Hitung Total Seluruh Tanam
+      totalTanamSemua += jumlah;
+
+      // Cek apakah batch ini sudah matang
+      if (ts != null) {
+        final tanggalTanam = ts.toDate();
+        final selisihHari = now.difference(tanggalTanam).inDays;
+
+        if (selisihHari >= masaTanam) {
+          totalTanamMatang += jumlah;
+        }
+      }
+    }
+
+    // 2. Ambil Data Panen
+    final panenSnap = await FirebaseFirestore.instance
+        .collection('data_panen')
+        .where('id_tanaman', isEqualTo: plantId)
+        .get();
+    
+    for (final doc in panenSnap.docs) {
+      totalPanen += (doc.data()['jumlah_panen'] as int? ?? 0);
+    }
+
+    // 3. Hitung Hasil Akhir
+    
+    // Sisa Tanaman (Stock) = Total Masuk - Total Keluar
+    int sisaTanaman = totalTanamSemua - totalPanen;
+    if (sisaTanaman < 0) sisaTanaman = 0; // Safety check
+
+    // Siap Panen (Ready) = (Total Tanam yang Sudah Matang) - (Yang Sudah Dipanen)
+    // Asumsinya kita memanen yang matang duluan.
+    int sisaSiapPanen = totalTanamMatang - totalPanen;
+    
+    // Validasi Logika: Siap panen tidak boleh minus
+    if (sisaSiapPanen < 0) sisaSiapPanen = 0;
+    
+    // Validasi Logika: Siap panen tidak boleh lebih besar dari sisa tanaman fisik
+    if (sisaSiapPanen > sisaTanaman) sisaSiapPanen = sisaTanaman;
+
+    return {
+      'stock': sisaTanaman, // Untuk plantTotalQty
+      'ready': sisaSiapPanen // Untuk plantHarvestQty
+    };
+  }
+
+  // ... Widget _buildHistorySection TETAP SAMA seperti kode awal Anda ...
   Widget _buildHistorySection(double width) {
     return Container(
       width: double.infinity,
@@ -236,9 +305,7 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
                                 const NeverScrollableScrollPhysics(),
                             children: dates.map((dateKey) {
                               final d = DateTime.parse(dateKey);
-                              final label = '${d.day} '
-                                  '${d.month.toString().padLeft(2, '0')} '
-                                  '${d.year}';
+                              final label = DateFormat('dd MMMM yyyy', 'id_ID').format(d);
 
                               int seladaPlant = 0,
                                   seladaHarvest = 0,
@@ -295,30 +362,7 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
     );
   }
 
-  Future<Map<String, int>> _aggregateForPlant(String plantId) async {
-    int tanam = 0;
-    int panen = 0;
-
-    final tanamSnap = await FirebaseFirestore.instance
-        .collection('data_tanam')
-        .where('id_tanaman', isEqualTo: plantId)
-        .get();
-    for (final doc in tanamSnap.docs) {
-      tanam += (doc.data()['jumlah_tanam'] as int? ?? 0);
-    }
-
-    final panenSnap = await FirebaseFirestore.instance
-        .collection('data_panen')
-        .where('id_tanaman', isEqualTo: plantId)
-        .get();
-    for (final doc in panenSnap.docs) {
-      panen += (doc.data()['jumlah_panen'] as int? ?? 0);
-    }
-
-    return {'tanam': tanam, 'panen': panen};
-  }
-
-  // --- FUNGSI EKSPOR PDF ---
+  // ... _exportToPdf TETAP SAMA ... (Anda bisa paste fungsi export Anda yang sebelumnya di sini)
   Future<void> _exportToPdf() async {
     setState(() => _isExporting = true);
 
@@ -354,13 +398,7 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
       }
       // Hitung Total Panen
       for (var doc in panenSnap.docs) {
-        final pid = doc.data()['id_tanaman'] as String?; // Field di data_panen
-        // Catatan: Di export JSON Anda, data_panen tidak punya 'id_tanaman', melainkan 'id_petani'. 
-        // Namun di fitur "Ready to Harvest" section Anda melakukan query: where('id_tanaman', isEqualTo: plantId). 
-        // Ini berarti seharusnya ada field 'id_tanaman' di 'data_panen' agar query itu bekerja. 
-        // Jika data Anda tidak konsisten, logika ini mungkin perlu disesuaikan.
-        // Kita asumsikan field 'id_tanaman' ada atau kita ambil via petani jika perlu.
-        // Untuk keamanan, kita skip jika null.
+        final pid = doc.data()['id_tanaman'] as String?; 
         final qty = doc.data()['jumlah_panen'] as int? ?? 0;
         
         if(pid != null && summaryData.containsKey(pid)) {
@@ -395,7 +433,6 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
       }
       for (var doc in panenSnap.docs) {
         final ts = doc.data()['tanggal_panen'] as Timestamp?;
-        // Asumsi ada field id_tanaman di data_panen, jika tidak ada, nama tanaman mungkin tidak diketahui
         final pid = doc.data()['id_tanaman'];
         if (ts != null) {
           historyList.add({

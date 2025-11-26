@@ -22,6 +22,7 @@ import 'package:hydroponics_app/screens/register_screen.dart';
 import 'package:hydroponics_app/screens/select_role_screen.dart';
 import 'package:hydroponics_app/screens/superadmin/superadmin_navigation.dart';
 import 'package:hydroponics_app/services/alarm_service.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -29,6 +30,7 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await initializeDateFormatting('id_ID', null);
   // Initialize alarm service
   await AlarmService.instance.initialize();
   runApp(const HydroponicApp());

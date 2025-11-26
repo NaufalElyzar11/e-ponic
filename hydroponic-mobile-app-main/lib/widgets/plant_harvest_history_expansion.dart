@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+// import 'package:intl/intl.dart'; // Hapus atau comment baris ini jika tidak dipakai di file ini
 
-class PlantHarvestHistoryExpansion extends StatelessWidget{
-  final String date;
+class PlantHarvestHistoryExpansion extends StatelessWidget {
+  final String date; // Ini menerima String yang SUDAH diformat dari parent
   final int seladaPlantQty;
   final int seladaHarvestQty;
   final int pakcoyPlantQty;
@@ -24,16 +25,25 @@ class PlantHarvestHistoryExpansion extends StatelessWidget{
   
   @override
   Widget build(BuildContext context) {
+    // HAPUS BARIS INI:
+    // final formattedDate = DateFormat('dd MMMM yyyy', 'id_ID').format(date);
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 8.0),
       clipBehavior: Clip.antiAlias,
       color: const Color.fromARGB(255, 226, 226, 226),
       
       child: ExpansionTile(
-        initiallyExpanded: false, // true berarti expand duluan
-        backgroundColor: Color.fromARGB(255, 226, 226, 226),
-        childrenPadding: EdgeInsets.only(bottom: 15, right: 15, left: 15),
-        title: Text(date, style: TextStyle(fontWeight: FontWeight.bold),),
+        initiallyExpanded: false,
+        backgroundColor: const Color.fromARGB(255, 226, 226, 226),
+        childrenPadding: const EdgeInsets.only(bottom: 15, right: 15, left: 15),
+        
+        // Gunakan 'date' langsung karena sudah berisi string "19 November 2025"
+        title: Text(
+          date, 
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        
         children: <Widget>[
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -41,15 +51,15 @@ class PlantHarvestHistoryExpansion extends StatelessWidget{
               constraints: BoxConstraints(minWidth: screenWidth - 150),
               child: DataTable(
                 border: TableBorder.all(color: Colors.transparent),
-                headingTextStyle: TextStyle(fontWeight: FontWeight.bold,),
-                columns: [
+                headingTextStyle: const TextStyle(fontWeight: FontWeight.bold,),
+                columns: const [
                   DataColumn(label: Text('Jenis Tanaman')),
                   DataColumn(label: Text('Jumlah Tanam'), headingRowAlignment: MainAxisAlignment.center),
                   DataColumn(label: Text('Jumlah Panen'), headingRowAlignment: MainAxisAlignment.center),
                 ],
                 rows: [
                   DataRow(cells: [
-                    DataCell(Text('Selada')),
+                    const DataCell(Text('Selada')),
                     DataCell(Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -64,7 +74,7 @@ class PlantHarvestHistoryExpansion extends StatelessWidget{
                     )),
                   ]),
                   DataRow(cells: [
-                    DataCell(Text('Pakcoy')),
+                    const DataCell(Text('Pakcoy')),
                     DataCell(Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -79,7 +89,7 @@ class PlantHarvestHistoryExpansion extends StatelessWidget{
                     )),
                   ]),
                   DataRow(cells: [
-                    DataCell(Text('Kangkung')),
+                    const DataCell(Text('Kangkung')),
                     DataCell(Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
