@@ -23,7 +23,7 @@ class _LogisticDeliveryStatusScreenState extends State<LogisticDeliveryStatusScr
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Tugas Panen', style: TextStyle(fontWeight: FontWeight.bold),),
+        title: const Text('Status Pengiriman', style: TextStyle(fontWeight: FontWeight.bold),),
         titleSpacing: 25,
         foregroundColor: Colors.white,
         backgroundColor: Color.fromARGB(255, 1, 68, 33),
@@ -136,13 +136,19 @@ class _LogisticDeliveryStatusScreenState extends State<LogisticDeliveryStatusScr
       isDeliver: (txData['is_deliver'] ?? false) as bool,
     );
 
-    final courierSnap = await FirebaseFirestore.instance
-        .collection('pengguna')
-        .doc(courierId)
-        .get();
-
-    final namaKurir =
-        (courierSnap.data()?['nama_pengguna'] ?? 'Kurir') as String;
+    // Jika courierId kosong, tampilkan "-"
+    String namaKurir = '-';
+    if (courierId.isNotEmpty) {
+      final courierSnap = await FirebaseFirestore.instance
+          .collection('pengguna')
+          .doc(courierId)
+          .get();
+      
+      if (courierSnap.exists) {
+        namaKurir = (courierSnap.data()?['nama_pengguna'] ?? '-') as String;
+      }
+    }
+    
     final courier = UserModel(
       username: namaKurir,
       role: 'Kurir',
