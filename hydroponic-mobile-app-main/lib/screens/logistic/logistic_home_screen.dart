@@ -114,13 +114,19 @@ class _LogisticHomeScreenState extends State<LogisticHomeScreen> {
                         );
                       }).toList();
 
-                      final dt =
-                          (data['tanggal'] as Timestamp?)?.toDate();
+                      // --- PERBAIKAN DI SINI ---
+                      final dt = (data['tanggal'] as Timestamp?)?.toDate();
+                      final createdAt = (data['created_at'] as Timestamp?)?.toDate(); // Ambil created_at
+
                       final dateStr = dt != null
                           ? DateFormat('dd MMM yyyy').format(dt)
                           : '';
-                      final timeStr =
-                          dt != null ? DateFormat('HH:mm').format(dt) : '';
+                      
+                      // Gunakan createdAt untuk jam, jika ada. Jika tidak, fallback ke dt atau string kosong.
+                      final timeStr = createdAt != null 
+                          ? DateFormat('HH:mm').format(createdAt) 
+                          : (dt != null ? DateFormat('HH:mm').format(dt) : '');
+                      // -------------------------
 
                       final tx = TransactionModel(
                         id: doc.id,
