@@ -79,14 +79,20 @@ class _FarmerHarvestScreenState extends State<FarmerHarvestScreen> {
                 final m = item as Map<String, dynamic>;
                 if (m['id_tanaman'] != petaniPlantId) continue;
 
-                final dt =
-                    (data['tanggal'] as Timestamp?)?.toDate();
+                // --- PERBAIKAN DI SINI ---
+                final dt = (data['tanggal'] as Timestamp?)?.toDate();
+                final createdAt = (data['created_at'] as Timestamp?)?.toDate(); // Ambil created_at
+
                 final dateStr = dt != null
                     ? DateFormat('dd MMM yyyy').format(dt)
                     : '';
-                final timeStr = dt != null
-                    ? DateFormat('HH:mm').format(dt)
-                    : '';
+                
+                // Gunakan createdAt untuk menampilkan jam yang benar.
+                // Jika tidak ada, fallback ke jam dari tanggal, atau string kosong.
+                final timeStr = createdAt != null 
+                    ? DateFormat('HH:mm').format(createdAt) 
+                    : (dt != null ? DateFormat('HH:mm').format(dt) : '');
+                // -------------------------
 
                 list.add(
                   HarvestAssignmentModel(
@@ -113,21 +119,56 @@ class _FarmerHarvestScreenState extends State<FarmerHarvestScreen> {
                 final assignment = list[index];
                 return HarvestAssignmentCard(
                   assignment: assignment,
-                  onMarkDone: () async {
-                    // catat panen dan tandai transaksi
-                    final tsDoc = docs[index];
-                    await FirebaseFirestore.instance
-                        .collection('data_panen')
-                        .add({
-                      'id_petani': user.uid,
-                      'jumlah_panen': assignment.plantQty,
-                      'tanggal_panen': tsDoc['tanggal'],
-                      'created_at': FieldValue.serverTimestamp(),
-                    });
-                    await FirebaseFirestore.instance
-                        .collection('transaksi')
-                        .doc(tsDoc.id)
-                        .update({'is_harvest': true});
+                  onMarkDone: () {
+                    // Tampilkan dialog konfirmasi
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext dialogContext) {
+                        return AlertDialog(
+                          title: const Text('Konfirmasi Panen'),
+                          content: Text(
+                            'Apakah Anda yakin ingin menandai panen untuk ${assignment.plantName} (${assignment.plantQty} pcs) sudah selesai?'
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(dialogContext).pop(); // Tutup dialog
+                              },
+                              child: const Text('Batal'),
+                            ),
+                            TextButton(
+                              onPressed: () async {
+                                Navigator.of(dialogContext).pop(); // Tutup dialog dulu
+                                
+                                // Lakukan proses simpan ke database
+                                final tsDoc = docs[index];
+                                await FirebaseFirestore.instance
+                                    .collection('data_panen')
+                                    .add({
+                                  'id_petani': user.uid,
+                                  'jumlah_panen': assignment.plantQty,
+                                  'tanggal_panen': tsDoc['tanggal'],
+                                  'created_at': FieldValue.serverTimestamp(),
+                                });
+                                
+                                await FirebaseFirestore.instance
+                                    .collection('transaksi')
+                                    .doc(tsDoc.id)
+                                    .update({'is_harvest': true});
+                                
+                                // Opsional: Tampilkan snackbar sukses
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Status panen berhasil diperbarui')),
+                                  );
+                                }
+                              },
+                              child: const Text('Ya, Sudah'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
                   },
                 );
               },
