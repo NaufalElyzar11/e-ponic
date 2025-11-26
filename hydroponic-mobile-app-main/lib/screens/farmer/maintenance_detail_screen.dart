@@ -24,9 +24,9 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
     final String idTanaman = args['id_tanaman'];
     
     // MENERIMA ID DATA TANAM (BATCH)
-    // Jika null (misal simulasi), pakai string kosong
     final String tanamId = args['tanam_id'] ?? '';
     
+    // Field ini menjadi kunci untuk menentukan jenis perawatan
     final String field = args['field'];
     final DateTime tanggal = args['tanggal'];
     final String title = args['title'];
@@ -167,6 +167,85 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
                 ],
               ),
             ),
+            
+            // --- BAGIAN BARU: MENAMPILKAN INTERVAL SESUAI JENIS PERAWATAN ---
+            const SizedBox(height: 15),
+            FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('tanaman')
+                  .doc(idTanaman)
+                  .get(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || !snapshot.data!.exists) {
+                  return const SizedBox.shrink();
+                }
+
+                final plantData = snapshot.data!.data() as Map<String, dynamic>;
+                
+                // Menentukan nama kolom berdasarkan 'field' atau 'title'
+                String intervalColumn = '';
+                
+                // Logika pemetaan field ke nama kolom database
+                // Menggunakan .toLowerCase() untuk pencocokan yang lebih aman
+                final fieldKey = field.toLowerCase();
+                final titleKey = title.toLowerCase();
+
+                if (fieldKey.contains('air') || fieldKey.contains('nutrisi') || titleKey.contains('air')) {
+                  intervalColumn = 'jadwal_pengecekan_air_dan_nutrisi';
+                } else if (fieldKey.contains('pembersihan') || titleKey.contains('pembersihan')) {
+                  intervalColumn = 'jadwal_pembersihan_instalasi';
+                } else if (fieldKey.contains('tanaman') || titleKey.contains('tanaman')) {
+                  // Cek tanaman ditaruh terakhir karena 'air_dan_nutrisi' mungkin mengandung kata tanaman
+                  intervalColumn = 'jadwal_pengecekan_tanaman';
+                }
+
+                // Ambil nilai interval, default '-' jika kolom tidak ditemukan
+                final interval = (intervalColumn.isNotEmpty) 
+                    ? (plantData[intervalColumn] ?? '-') 
+                    : '-';
+
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(15),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.blue.shade100),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.repeat, color: Colors.blue.shade700),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Interval Jadwal',
+                              style: TextStyle(
+                                fontSize: 14, 
+                                color: Colors.blue.shade700
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$interval Hari Sekali',
+                              style: TextStyle(
+                                fontSize: 16, 
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade900
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            // --- AKHIR BAGIAN BARU ---
+
             const SizedBox(height: 40),
 
             // Tombol Aksi
@@ -223,8 +302,6 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
     try {
       final dateKey = DateFormat('yyyy-MM-dd').format(tanggal);
       
-      // PERUBAHAN PENTING: ID Dokumen sekarang menyertakan tanamId
-      // Ini memastikan jadwal ini unik untuk batch penanaman ini
       final docId = '${idPetani}_${idTanaman}_${tanamId}_${field}_$dateKey';
 
       await FirebaseFirestore.instance
@@ -233,7 +310,7 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
           .set({
         'id_petani': idPetani,
         'id_tanaman': idTanaman,
-        'id_data_tanam': tanamId, // Menyimpan referensi batch
+        'id_data_tanam': tanamId,
         'field': field,
         'tanggal': Timestamp.fromDate(tanggal),
         'is_done': true,
