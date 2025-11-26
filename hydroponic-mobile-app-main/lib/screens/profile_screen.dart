@@ -79,41 +79,10 @@ class ProfileScreen extends StatelessWidget {
                 heightFactor: 1.5,
                 child: Column(
                   children: [
-                    Stack(
-                      children: [
-                        const Icon(
-                          Icons.account_circle,
-                          size: 150,
-                          color: Color.fromARGB(255, 1, 68, 33),
-                        ),
-                        Positioned(
-                          bottom: 10,
-                          right: 10,
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                                color: Colors.white,
-                                border: BoxBorder.all(
-                                    color: const Color.fromARGB(
-                                        255, 1, 68, 33),
-                                    width: 2),
-                                borderRadius: const BorderRadius.all(
-                                    Radius.circular(20))),
-                            child: IconButton(
-                              onPressed: () {
-                                // actions
-                              },
-                              icon: const Icon(
-                                Icons.edit,
-                                color:
-                                    Color.fromARGB(255, 1, 68, 33),
-                              ),
-                              iconSize: 21,
-                            ),
-                          ),
-                        ),
-                      ],
+                    Icon(
+                      Icons.account_circle,
+                      size: 150,
+                      color: Color.fromARGB(255, 1, 68, 33),
                     ),
                     Text(
                       name,
