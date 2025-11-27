@@ -36,35 +36,36 @@ class PlantHarvestCard extends StatelessWidget{
                 maxLines: 2,
                 softWrap: true,
               ),
-            SizedBox(height: 10,),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  '$plantHarvestQty',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 30,
-                    fontWeight: FontWeight.bold
+              const SizedBox(height: 10),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '$plantHarvestQty',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold
+                    ),
                   ),
-                ),
-                SizedBox(width: 3,),
-                Text(
-                  'bibit',
-                  style: TextStyle(
-                    color: Colors.white
+                  const SizedBox(width: 3),
+                  const Text(
+                    'bibit',
+                    style: TextStyle(
+                      color: Colors.white
+                    ),
                   ),
-                ),
-              ],
-            ),
-            Text(
-              'dari $plantTotalQty bibit',
-              style: const TextStyle(
-                color: Colors.white
+                ],
               ),
-            )
-          ],
+              Text(
+                'dari $plantTotalQty bibit',
+                style: const TextStyle(
+                  color: Colors.white
+                ),
+              )
+            ],
+          ),
         ),
       ),
     );

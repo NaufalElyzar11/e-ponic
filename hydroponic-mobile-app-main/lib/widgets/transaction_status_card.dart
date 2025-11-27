@@ -51,8 +51,9 @@ class _TransactionStatusCardState extends State<TransactionStatusCard> {
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Nama Penerima:',
                   style: TextStyle(
                     color: Colors.white,
@@ -60,12 +61,17 @@ class _TransactionStatusCardState extends State<TransactionStatusCard> {
                     fontWeight: FontWeight.bold
                   ),
                 ),
-                Text(
-                  widget.transaction.customerName,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold
+                Flexible(
+                  child: Text(
+                    widget.transaction.customerName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                    textAlign: TextAlign.end,
                   ),
                 )
               ],
@@ -79,11 +85,23 @@ class _TransactionStatusCardState extends State<TransactionStatusCard> {
                 children: widget.transaction.plantQuantity.map((plantQty) {
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(plantQty.plant.plantName, style: TextStyle(color: Colors.white),),
-                      Text(
-                        '${plantQty.quantity} pcs x ${NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', ).format(plantQty.plant.price)}', 
-                        style: TextStyle(color: Colors.white),
+                      Flexible(
+                        child: Text(
+                          plantQty.plant.plantName, 
+                          style: const TextStyle(color: Colors.white),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                        ),
+                      ),
+                      Flexible(
+                        child: Text(
+                          '${plantQty.quantity} pcs x ${NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', ).format(plantQty.plant.price)}', 
+                          style: const TextStyle(color: Colors.white),
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.end,
+                        ),
                       ),
                     ],
                   );
