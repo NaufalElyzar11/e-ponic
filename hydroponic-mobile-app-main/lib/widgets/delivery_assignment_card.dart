@@ -28,14 +28,21 @@ class DeliveryAssignmentCard extends StatelessWidget{
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    assignment.transaction.customerName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                  // PERBAIKAN DI SINI: Gunakan Expanded untuk nama customer
+                  Expanded(
+                    child: Text(
+                      assignment.transaction.customerName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                      overflow: TextOverflow.ellipsis, // Menambahkan tanda ... jika terlalu panjang
+                      maxLines: 1, // Membatasi hanya 1 baris
                     ),
                   ),
+                  // Menambahkan sedikit jarak agar teks tidak menempel langsung dengan tanggal
+                  const SizedBox(width: 8),
                   Row(
                     children: [
                       Text(
