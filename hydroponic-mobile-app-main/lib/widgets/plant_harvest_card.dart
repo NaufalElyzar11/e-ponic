@@ -17,19 +17,25 @@ class PlantHarvestCard extends StatelessWidget{
   Widget build(BuildContext context) {
     return Card(
       color: AppColors.primary,
-      child: Padding(
-        padding: EdgeInsets.only(top: 15, bottom: 15, left: 20, right: 30),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              plantName,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 150, maxWidth: 200),
+        child: Padding(
+          padding: const EdgeInsets.only(top: 15, bottom: 15, left: 20, right: 30),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                plantName,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+                softWrap: true,
               ),
-            ),
             SizedBox(height: 10,),
             Row(
               crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -54,7 +60,7 @@ class PlantHarvestCard extends StatelessWidget{
             ),
             Text(
               'dari $plantTotalQty bibit',
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.white
               ),
             )

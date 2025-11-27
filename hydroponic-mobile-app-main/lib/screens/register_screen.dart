@@ -106,6 +106,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       inputFormatters: [
                         // Hanya memperbolehkan huruf, spasi, titik (.), dan dash (-)
                         FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s.\-]')),
+                        LengthLimitingTextInputFormatter(30), // Batasi maksimal 30 karakter
                       ],
                       validator: (value) {
                         if (value == null || value.isEmpty) {
