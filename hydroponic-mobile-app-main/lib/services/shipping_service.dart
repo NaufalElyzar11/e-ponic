@@ -80,7 +80,7 @@ class ShippingService {
   Stream<QuerySnapshot<Map<String, dynamic>>> allShipmentsStream() {
     return _db
         .collection('pengiriman')
-        .orderBy('tanggal_pengiriman', descending: true)
+        .orderBy('created_at', descending: true)
         .snapshots();
   }
 }

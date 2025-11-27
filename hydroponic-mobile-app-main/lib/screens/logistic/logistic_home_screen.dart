@@ -49,8 +49,7 @@ class _LogisticHomeScreenState extends State<LogisticHomeScreen> {
           .get(),
       builder: (context, userSnap) {
         final uData = userSnap.data?.data() ?? {};
-        final name = (uData['nama_pengguna'] ?? authUser?.email ??
-            'Staf Logistik') as String;
+        final name = (uData['nama_pengguna'] ?? 'Staf Logistik') as String;
 
         return Scaffold(
           backgroundColor: Colors.white,

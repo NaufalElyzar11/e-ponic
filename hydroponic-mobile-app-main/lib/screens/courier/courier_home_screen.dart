@@ -55,7 +55,7 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> {
           .get(),
       builder: (context, userSnap) {
         final uData = userSnap.data?.data() ?? {};
-        final name = (uData['nama_pengguna'] ?? authUser.email ?? 'Kurir') as String;
+        final name = (uData['nama_pengguna'] ?? 'Kurir') as String;
 
         return Scaffold(
           backgroundColor: Colors.white,
@@ -85,17 +85,17 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      // 1. Panggil fungsi test
-                      await NotificationService.instance.testNotification(
-                        title: 'Test Kurir',
-                        body: 'Halo, ini tes notifikasi lokal!',
-                      );
-                    },
-                    icon: const Icon(Icons.notifications_active),
-                    label: const Text('Cek Notifikasi'),
-                  ),
+                  // ElevatedButton.icon(
+                  //   onPressed: () async {
+                  //     // 1. Panggil fungsi test
+                  //     await NotificationService.instance.testNotification(
+                  //       title: 'Test Kurir',
+                  //       body: 'Halo, ini tes notifikasi lokal!',
+                  //     );
+                  //   },
+                  //   icon: const Icon(Icons.notifications_active),
+                  //   label: const Text('Cek Notifikasi'),
+                  // ),
                   const SizedBox(height: 25),
                   StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                     stream: ShippingService.instance.courierAssignmentsStream(authUser.uid),

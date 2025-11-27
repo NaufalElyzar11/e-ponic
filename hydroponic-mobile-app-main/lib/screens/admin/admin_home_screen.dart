@@ -26,8 +26,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           .get(),
       builder: (context, snapshot) {
         final data = snapshot.data?.data() ?? {};
-        final name =
-            (data['nama_pengguna'] ?? user?.email ?? 'Admin') as String;
+        final name = (data['nama_pengguna'] ?? 'Admin') as String;
 
         return Scaffold(
           backgroundColor: Colors.white,

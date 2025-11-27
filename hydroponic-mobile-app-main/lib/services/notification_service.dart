@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:async/async.dart'; // Tambahkan package ini di pubspec.yaml jika belum ada
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -273,25 +274,21 @@ class NotificationService {
         });
   }
 
-  /// STREAM Notifikasi untuk Staf Logistik
+  /// STREAM Notifikasi untuk Staf Logistik (REVISI: MENGGUNAKAN MERGE STREAM)
   Stream<List<Map<String, dynamic>>> _getLogisticNotificationsStream() {
-    return _db
+    // STREAM 1: Transaksi Siap Dikirim (Logika Lama)
+    final readyToShipStream = _db
         .collection('transaksi')
         .where('is_harvest', isEqualTo: true)
         .where('is_assigned', isEqualTo: false)
         .snapshots()
         .asyncMap((snapshot) async {
           final notifications = <Map<String, dynamic>>[];
-
-          // 1. Transaksi Siap Dikirim
           for (final doc in snapshot.docs) {
             final data = doc.data();
-            
-            // Prioritaskan updated_at karena status is_harvest baru saja berubah
             final createdAt = (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
             final updatedAt = (data['updated_at'] as Timestamp?)?.toDate();
             final effectiveTimestamp = updatedAt ?? createdAt;
-
             final namaPelanggan = (data['nama_pelanggan'] ?? 'Pelanggan') as String;
             
             notifications.add({
@@ -306,22 +303,45 @@ class NotificationService {
               'isRead': false,
             });
           }
+          return notifications;
+        });
 
-          // 2. Tambahan: Update Status Pengiriman (Fetch manual 5 terakhir)
-          try {
-             final recentShipments = await _db.collection('pengiriman')
-                .orderBy('updated_at', descending: true).limit(5).get();
+    // STREAM 2: Status Pengiriman Selesai (Logika Baru - Realtime)
+    final deliveryCompletedStream = _db
+        .collection('pengiriman')
+        .orderBy('updated_at', descending: true)
+        .limit(10) // Ambil 10 update terakhir
+        .snapshots()
+        .asyncMap((snapshot) async {
+           final notifications = <Map<String, dynamic>>[];
+           
+           for (final doc in snapshot.docs) {
+             final data = doc.data();
+             final status = (data['status_pengiriman'] ?? '') as String;
              
-             for (final doc in recentShipments.docs) {
-                final data = doc.data();
+             // Filter: Hanya ambil yang statusnya Selesai/Terkirim
+             if (status.toLowerCase().contains('selesai') || 
+                 status.toLowerCase().contains('terkirim')) {
+               
                 final updatedAt = (data['updated_at'] as Timestamp?)?.toDate() ?? DateTime.now();
-                final status = (data['status_pengiriman'] ?? '') as String;
-                
+                final transaksiId = (data['id_transaksi'] ?? '') as String;
+
+                // Ambil Nama Pelanggan dari Transaksi
+                String namaPelanggan = 'Pelanggan';
+                if (transaksiId.isNotEmpty) {
+                  try {
+                    final txDoc = await _db.collection('transaksi').doc(transaksiId).get();
+                    if (txDoc.exists) {
+                       namaPelanggan = (txDoc.data()?['nama_pelanggan'] ?? 'Pelanggan') as String;
+                    }
+                  } catch (_) {}
+                }
+
                 notifications.add({
-                  'id': 'status_${doc.id}',
-                  'title': 'Update Status',
-                  'body': 'Status: $status',
-                  'timestamp': updatedAt,
+                  'id': 'selesai_${doc.id}', // ID Unik
+                  'title': 'Pengiriman Selesai',
+                  'body': 'Kurir telah menyelesaikan pengiriman ke $namaPelanggan',
+                  'timestamp': updatedAt, 
                   'date': DateFormat('dd MMM yyyy').format(updatedAt),
                   'time': DateFormat('HH:mm').format(updatedAt),
                   'type': 'delivery_status',
@@ -329,10 +349,12 @@ class NotificationService {
                   'isRead': false,
                 });
              }
-          } catch (e) {}
-
-          return notifications;
+           }
+           return notifications;
         });
+
+    // Menggabungkan kedua stream agar Logistik menerima notifikasi dari kedua sumber secara realtime
+    return StreamGroup.merge([readyToShipStream, deliveryCompletedStream]);
   }
 
   /// STREAM Notifikasi untuk Petani (FIXED)
@@ -342,7 +364,6 @@ class NotificationService {
     }
 
     // 1. Listen ke 'transaksi' yang BELUM dipanen (is_harvest == false)
-    // NOTE: Hapus .orderBy('created_at') untuk menghindari masalah Index Firestore
     return _db
         .collection('transaksi')
         .where('is_harvest', isEqualTo: false) 
