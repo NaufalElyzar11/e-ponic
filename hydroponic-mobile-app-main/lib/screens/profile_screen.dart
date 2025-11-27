@@ -93,28 +93,28 @@ class ProfileScreen extends StatelessWidget {
                     Text(roleText),
                   ],
                 )),
-            ListTile(
-              leading: const Icon(
-                Icons.settings,
-                size: 25,
-              ),
-              title: const Text('Pengaturan'),
-              onTap: () {
-                // actions
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(
-                Icons.headset_mic,
-                size: 25,
-              ),
-              title: const Text('Bantuan & dukungan'),
-              onTap: () {
-                // actions
-              },
-            ),
-            const Divider(),
+            // ListTile(
+            //   leading: const Icon(
+            //     Icons.settings,
+            //     size: 25,
+            //   ),
+            //   title: const Text('Pengaturan'),
+            //   onTap: () {
+            //     // actions
+            //   },
+            // ),
+            // const Divider(),
+            // ListTile(
+            //   leading: const Icon(
+            //     Icons.headset_mic,
+            //     size: 25,
+            //   ),
+            //   title: const Text('Bantuan & dukungan'),
+            //   onTap: () {
+            //     // actions
+            //   },
+            // ),
+            // const Divider(),
             ListTile(
               textColor: Colors.red,
               iconColor: Colors.red,
