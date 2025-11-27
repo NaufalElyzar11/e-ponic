@@ -44,12 +44,20 @@ class EmployeeListCard extends StatelessWidget{
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      user.username,
-                      style: TextStyle(
-                        color: Colors.white
+                    Expanded(
+                      child: Text(
+                        user.username,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                        overflow: TextOverflow.ellipsis, // Menambahkan tanda ... jika terlalu panjang
+                        maxLines: 1, // Membatasi hanya 1 baris
                       ),
                     ),
+                    SizedBox(width: 8,),
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [

@@ -57,7 +57,7 @@ class _EmployeeAccountListScreenState extends State<EmployeeAccountListScreen> {
           Expanded(child: 
             SingleChildScrollView(
               child: Container(
-                padding: const EdgeInsets.all(15),
+                padding: const EdgeInsets.only(right: 15, left: 15, top: 15, bottom: 40),
                 child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: FirebaseFirestore.instance
                       .collection('pengguna')
