@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/intl.dart';
 
 /// Service untuk mengelola notifikasi berdasarkan role user
@@ -11,6 +12,87 @@ class NotificationService {
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  
+  // Flutter Local Notifications
+  final FlutterLocalNotificationsPlugin _localNotifications = 
+      FlutterLocalNotificationsPlugin();
+  
+  bool _initialized = false;
+
+  /// Inisialisasi local notifications
+  Future<void> initialize() async {
+    if (_initialized) return;
+    
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+    
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+    
+    await _localNotifications.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (details) {
+        // Handle notification tap jika diperlukan
+      },
+    );
+    
+    // Buat notification channel untuk Android
+    const androidChannel = AndroidNotificationChannel(
+      'test_channel',
+      'Test Notifications',
+      description: 'Channel untuk test notifikasi',
+      importance: Importance.high,
+    );
+    
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(androidChannel);
+    
+    _initialized = true;
+  }
+
+  /// Test notifikasi - menampilkan notifikasi langsung
+  Future<void> testNotification({
+    String title = 'Test Notifikasi',
+    String body = 'Ini adalah notifikasi test dari E-Ponic',
+  }) async {
+    if (!_initialized) {
+      await initialize();
+    }
+    
+    const androidDetails = AndroidNotificationDetails(
+      'test_channel',
+      'Test Notifications',
+      channelDescription: 'Channel untuk test notifikasi',
+      importance: Importance.high,
+      priority: Priority.high,
+      showWhen: true,
+    );
+    
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+    
+    const notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+    
+    await _localNotifications.show(
+      9999, // ID unik untuk test notification
+      title,
+      body,
+      notificationDetails,
+    );
+  }
 
   /// Mendapatkan notifikasi berdasarkan role user
   Stream<List<Map<String, dynamic>>> getNotificationsStream() {
