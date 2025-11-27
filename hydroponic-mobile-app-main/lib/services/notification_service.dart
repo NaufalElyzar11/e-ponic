@@ -13,17 +13,24 @@ class NotificationService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   
-  // Flutter Local Notifications
   final FlutterLocalNotificationsPlugin _localNotifications = 
       FlutterLocalNotificationsPlugin();
   
   bool _initialized = false;
+  
+  // Waktu terakhir kali aplikasi mengecek notifikasi.
+  // Diinisialisasi dengan waktu sekarang agar notifikasi lama (history) tidak muncul.
+  DateTime _lastCheckTime = DateTime.now();
+  StreamSubscription? _notificationSubscription;
 
   /// Inisialisasi local notifications
   Future<void> initialize() async {
     if (_initialized) return;
     
+    // 1. Setup Android
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    
+    // 2. Setup iOS
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -38,16 +45,18 @@ class NotificationService {
     await _localNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (details) {
-        // Handle notification tap jika diperlukan
+        // Handle jika notifikasi diklik
       },
     );
     
-    // Buat notification channel untuk Android
+    // 3. Buat Notification Channel (Penting untuk Android 8.0+)
     const androidChannel = AndroidNotificationChannel(
-      'test_channel',
-      'Test Notifications',
-      description: 'Channel untuk test notifikasi',
-      importance: Importance.high,
+      'main_channel', 
+      'Notifikasi Aplikasi',
+      description: 'Pemberitahuan penting aplikasi',
+      importance: Importance.max,
+      playSound: true,
+      enableVibration: true,
     );
     
     await _localNotifications
@@ -55,438 +64,456 @@ class NotificationService {
         ?.createNotificationChannel(androidChannel);
     
     _initialized = true;
+    _lastCheckTime = DateTime.now();
+    
+    print("🔔 NotificationService Initialized. Start Time: $_lastCheckTime");
   }
 
-  /// Test notifikasi - menampilkan notifikasi langsung
-  Future<void> testNotification({
-    String title = 'Test Notifikasi',
-    String body = 'Ini adalah notifikasi test dari E-Ponic',
-  }) async {
+  /// Mulai mendengarkan stream notifikasi
+  void startListening() {
+    stopListening(); // Hentikan listener lama jika ada
+
     if (!_initialized) {
-      await initialize();
+      initialize().then((_) => _listen());
+    } else {
+      _listen();
     }
+  }
+
+  /// Logika utama pendengar stream
+  void _listen() {
+    print("🎧 Start Listening to Notification Stream...");
     
+    _notificationSubscription = getNotificationsStream().listen((notifications) {
+      // 1. Urutkan dari yang Terlama -> Terbaru (Ascending)
+      // Ini penting agar kita memproses urutan waktu dengan benar
+      notifications.sort((a, b) => (a['timestamp'] as DateTime).compareTo(b['timestamp'] as DateTime));
+
+      DateTime? maxTimestampInBatch; 
+      int newCount = 0;
+
+      // 2. Loop semua data yang masuk
+      for (var data in notifications) {
+        final timestamp = data['timestamp'] as DateTime;
+        final title = data['title'] ?? 'Info';
+        
+        // 3. Filter: Hanya tampilkan jika LEBIH BARU dari waktu cek terakhir
+        if (timestamp.isAfter(_lastCheckTime)) {
+          print("🚀 TRIGGER NOTIF: $title (Time: $timestamp)");
+          
+          _showLocalNotification(
+            id: data['id'].hashCode,
+            title: title,
+            body: data['body'] ?? '',
+            payload: data['referenceId'],
+          );
+          
+          newCount++;
+
+          // Cari waktu paling baru di batch ini untuk update _lastCheckTime nanti
+          if (maxTimestampInBatch == null || timestamp.isAfter(maxTimestampInBatch!)) {
+            maxTimestampInBatch = timestamp;
+          }
+        }
+      }
+
+      // 4. Update _lastCheckTime SETELAH semua diproses
+      // Ini mencegah bug di mana data kedua ter-skip karena _lastCheckTime diupdate terlalu cepat
+      if (maxTimestampInBatch != null) {
+        _lastCheckTime = maxTimestampInBatch!;
+        print("✅ Processed $newCount new notifications. Updated Last Check to: $_lastCheckTime");
+      }
+    }, onError: (e) {
+      print("❌ Error in Notification Stream: $e");
+    });
+  }
+
+  /// Berhenti mendengarkan notifikasi
+  void stopListening() {
+    _notificationSubscription?.cancel();
+    _notificationSubscription = null;
+    print("🛑 Notification Listener Stopped");
+  }
+
+  /// Helper untuk menampilkan notifikasi sistem
+  Future<void> _showLocalNotification({
+    required int id,
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    // Pastikan terinisialisasi
+    if (!_initialized) await initialize();
+
     const androidDetails = AndroidNotificationDetails(
-      'test_channel',
-      'Test Notifications',
-      channelDescription: 'Channel untuk test notifikasi',
-      importance: Importance.high,
+      'main_channel',
+      'Notifikasi Aplikasi',
+      channelDescription: 'Pemberitahuan penting aplikasi',
+      importance: Importance.max,
       priority: Priority.high,
-      showWhen: true,
+      ticker: 'ticker',
+      styleInformation: BigTextStyleInformation(''), // Agar teks panjang tampil penuh
     );
-    
+
     const iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
     );
-    
-    const notificationDetails = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-    
+
     await _localNotifications.show(
-      9999, // ID unik untuk test notification
+      id,
       title,
       body,
-      notificationDetails,
+      NotificationDetails(android: androidDetails, iOS: iosDetails),
+      payload: payload,
     );
   }
 
-  /// Mendapatkan notifikasi berdasarkan role user
+  Future<void> testNotification({required String title, required String body}) async {
+    await _showLocalNotification(id: 9999, title: title, body: body);
+  }
+
+  // ==================== STREAM CONTROLLER (ROUTING) ====================
+
   Stream<List<Map<String, dynamic>>> getNotificationsStream() {
     final user = _auth.currentUser;
-    if (user == null) {
-      return Stream.value([]);
-    }
+    if (user == null) return Stream.value([]);
 
-    // Ambil role user dari Firestore dan listen perubahan
-    return _db.collection('pengguna').doc(user.uid).snapshots().asyncMap((userDoc) async {
+    // Listen ke perubahan user doc untuk menangani perubahan role/plantId
+    return _db.collection('pengguna').doc(user.uid).snapshots().asyncExpand((userDoc) {
       final userData = userDoc.data();
-      if (userData == null) return <Map<String, dynamic>>[];
+      if (userData == null) return Stream.value([]);
 
       final role = (userData['posisi'] ?? '') as String;
-      
-      try {
-        switch (role) {
-          case 'Admin':
-            return await _getAdminNotifications();
-          case 'Petani':
-            return await _getFarmerNotifications(user.uid, userData['id_tanaman'] as String?);
-          case 'Staf Logistik':
-            return await _getLogisticNotifications();
-          case 'Kurir':
-            return await _getCourierNotifications(user.uid);
-          case 'Super Admin':
-            return await _getSuperAdminNotifications();
-          default:
-            return <Map<String, dynamic>>[];
-        }
-      } catch (e) {
-        print('Error getting notifications: $e');
-        return <Map<String, dynamic>>[];
+      print("👤 Notification Service - User Role: $role"); 
+
+      switch (role) {
+        case 'Kurir':
+          return _getCourierNotificationsStream(user.uid);
+        
+        case 'Staf Logistik':
+          return _getLogisticNotificationsStream();
+
+        case 'Petani':
+          final plantId = userData['id_tanaman'] as String?;
+          print("🌱 Notification Service - Petani Plant ID: $plantId");
+          return _getFarmerNotificationsStream(user.uid, plantId);
+
+        case 'Admin':
+          return Stream.fromFuture(_getAdminNotifications());
+        
+        case 'Super Admin':
+          return Stream.fromFuture(_getSuperAdminNotifications());
+        
+        default:
+          return Stream.value([]);
       }
     });
   }
+
+  // ==================== LOGIKA STREAM PER ROLE ====================
+
+  /// STREAM Notifikasi untuk Kurir
+  Stream<List<Map<String, dynamic>>> _getCourierNotificationsStream(String courierId) {
+    return _db
+        .collection('pengiriman')
+        .where('id_kurir', isEqualTo: courierId)
+        .orderBy('tanggal_pengiriman', descending: true)
+        .limit(10)
+        .snapshots() 
+        .asyncMap((snapshot) async {
+          final notifications = <Map<String, dynamic>>[];
+
+          for (final doc in snapshot.docs) {
+            final data = doc.data();
+            
+            final createdAt = (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
+            final updatedAt = (data['updated_at'] as Timestamp?)?.toDate();
+            // Gunakan updated_at jika ada (misal status berubah)
+            final effectiveTimestamp = updatedAt ?? createdAt;
+
+            final status = (data['status_pengiriman'] ?? 'Belum Dikirim') as String;
+            final transaksiId = (data['id_transaksi'] ?? '') as String;
+            
+            String namaPelanggan = 'Pelanggan';
+            if (transaksiId.isNotEmpty) {
+              try {
+                final txDoc = await _db.collection('transaksi').doc(transaksiId).get();
+                if (txDoc.exists) {
+                   namaPelanggan = (txDoc.data()?['nama_pelanggan'] ?? 'Pelanggan') as String;
+                }
+              } catch (_) {}
+            }
+            
+            String title = 'Pengiriman Baru';
+            String body = 'Pengiriman ke $namaPelanggan';
+            
+            if (status.toLowerCase().contains('selesai') || status.toLowerCase().contains('terkirim')) {
+              title = 'Pengiriman Selesai';
+              body = 'Pengiriman ke $namaPelanggan telah selesai';
+            } else if (status != 'Belum Dikirim') {
+              title = 'Update Pengiriman';
+              body = 'Status: $status - $namaPelanggan';
+            }
+            
+            notifications.add({
+              'id': 'kurir_${doc.id}',
+              'title': title,
+              'body': body,
+              'timestamp': effectiveTimestamp,
+              'date': DateFormat('dd MMM yyyy').format(effectiveTimestamp),
+              'time': DateFormat('HH:mm').format(effectiveTimestamp),
+              'type': 'delivery',
+              'referenceId': doc.id,
+              'isRead': false,
+            });
+          }
+          return notifications;
+        });
+  }
+
+  /// STREAM Notifikasi untuk Staf Logistik
+  Stream<List<Map<String, dynamic>>> _getLogisticNotificationsStream() {
+    return _db
+        .collection('transaksi')
+        .where('is_harvest', isEqualTo: true)
+        .where('is_assigned', isEqualTo: false)
+        .snapshots()
+        .asyncMap((snapshot) async {
+          final notifications = <Map<String, dynamic>>[];
+
+          // 1. Transaksi Siap Dikirim
+          for (final doc in snapshot.docs) {
+            final data = doc.data();
+            
+            // Prioritaskan updated_at karena status is_harvest baru saja berubah
+            final createdAt = (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
+            final updatedAt = (data['updated_at'] as Timestamp?)?.toDate();
+            final effectiveTimestamp = updatedAt ?? createdAt;
+
+            final namaPelanggan = (data['nama_pelanggan'] ?? 'Pelanggan') as String;
+            
+            notifications.add({
+              'id': 'pengiriman_${doc.id}',
+              'title': 'Siap Dikirim',
+              'body': 'Pesanan $namaPelanggan siap dijemput & dikirim',
+              'timestamp': effectiveTimestamp,
+              'date': DateFormat('dd MMM yyyy').format(effectiveTimestamp),
+              'time': DateFormat('HH:mm').format(effectiveTimestamp),
+              'type': 'shipping',
+              'referenceId': doc.id,
+              'isRead': false,
+            });
+          }
+
+          // 2. Tambahan: Update Status Pengiriman (Fetch manual 5 terakhir)
+          try {
+             final recentShipments = await _db.collection('pengiriman')
+                .orderBy('updated_at', descending: true).limit(5).get();
+             
+             for (final doc in recentShipments.docs) {
+                final data = doc.data();
+                final updatedAt = (data['updated_at'] as Timestamp?)?.toDate() ?? DateTime.now();
+                final status = (data['status_pengiriman'] ?? '') as String;
+                
+                notifications.add({
+                  'id': 'status_${doc.id}',
+                  'title': 'Update Status',
+                  'body': 'Status: $status',
+                  'timestamp': updatedAt,
+                  'date': DateFormat('dd MMM yyyy').format(updatedAt),
+                  'time': DateFormat('HH:mm').format(updatedAt),
+                  'type': 'delivery_status',
+                  'referenceId': doc.id,
+                  'isRead': false,
+                });
+             }
+          } catch (e) {}
+
+          return notifications;
+        });
+  }
+
+  /// STREAM Notifikasi untuk Petani (FIXED)
+  Stream<List<Map<String, dynamic>>> _getFarmerNotificationsStream(String userId, String? plantId) {
+    if (plantId == null) {
+      return Stream.value([]);
+    }
+
+    // 1. Listen ke 'transaksi' yang BELUM dipanen (is_harvest == false)
+    // NOTE: Hapus .orderBy('created_at') untuk menghindari masalah Index Firestore
+    return _db
+        .collection('transaksi')
+        .where('is_harvest', isEqualTo: false) 
+        .snapshots()
+        .asyncMap((snapshot) async {
+          final notifications = <Map<String, dynamic>>[];
+
+          // A. Proses Tugas Panen (Real-time)
+          for (final doc in snapshot.docs) {
+            final data = doc.data();
+            final items = (data['items'] as List?) ?? [];
+            
+            // FILTERING LOKAL: Cek apakah ada item yang ID tanamannya cocok
+            bool isMyTask = false;
+            int myTotalItems = 0;
+            String myPlantName = 'Tanaman';
+
+            for (var item in items) {
+              final m = item as Map<String, dynamic>;
+              // Bandingkan ID sebagai String
+              if (m['id_tanaman'].toString() == plantId.toString()) {
+                isMyTask = true;
+                myTotalItems += (m['jumlah'] ?? 0) as int;
+                myPlantName = (m['nama_tanaman'] ?? 'Tanaman') as String;
+              }
+            }
+
+            if (isMyTask && myTotalItems > 0) {
+              // Ambil waktu. Prioritas: created_at -> tanggal -> now
+              final createdAt = (data['created_at'] as Timestamp?)?.toDate() ?? 
+                                (data['tanggal'] as Timestamp?)?.toDate() ??
+                                DateTime.now();
+              
+              final namaPelanggan = (data['nama_pelanggan'] ?? 'Pelanggan') as String;
+              
+              notifications.add({
+                'id': 'panen_${doc.id}',
+                'title': 'Tugas Panen Baru', 
+                'body': 'Permintaan $myTotalItems $myPlantName untuk $namaPelanggan',
+                'timestamp': createdAt, 
+                'date': DateFormat('dd MMM yyyy').format(createdAt),
+                'time': DateFormat('HH:mm').format(createdAt),
+                'type': 'harvest',
+                'referenceId': doc.id,
+                'isRead': false,
+              });
+            }
+          }
+
+          // B. Gabungkan dengan Jadwal Perawatan (Fetch Future manual)
+          try {
+              final maintenanceList = await _getFarmerMaintenance(plantId);
+              notifications.addAll(maintenanceList);
+          } catch (_) {}
+          
+          return notifications;
+        });
+  }
+
+  /// Helper: Get Jadwal Perawatan (Future)
+  Future<List<Map<String, dynamic>>> _getFarmerMaintenance(String? plantId) async {
+    final notifications = <Map<String, dynamic>>[];
+    if (plantId == null) return notifications;
+
+    final today = DateTime.now();
+    final startOfDay = DateTime(today.year, today.month, today.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    try {
+      final todaySchedules = await _db
+          .collection('perawatan_tanaman')
+          .where('id_tanaman', isEqualTo: plantId)
+          .where('tanggal', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .where('tanggal', isLessThan: Timestamp.fromDate(endOfDay))
+          .get();
+
+      for (final doc in todaySchedules.docs) {
+        final data = doc.data();
+        final tanggal = (data['tanggal'] as Timestamp?)?.toDate() ?? DateTime.now();
+        final namaPerawatan = (data['nama_perawatan'] ?? 'Perawatan') as String;
+        
+        notifications.add({
+          'id': 'perawatan_${doc.id}',
+          'title': 'Jadwal Perawatan',
+          'body': 'Jangan lupa: $namaPerawatan hari ini',
+          'timestamp': tanggal,
+          'date': DateFormat('dd MMM yyyy').format(tanggal),
+          'time': DateFormat('HH:mm').format(tanggal),
+          'type': 'maintenance',
+          'referenceId': doc.id,
+          'isRead': false,
+        });
+      }
+    } catch (e) {}
+    return notifications;
+  }
+
+  // ==================== LOGIKA ROLE LAIN (Future) ====================
 
   /// Notifikasi untuk Admin
   Future<List<Map<String, dynamic>>> _getAdminNotifications() async {
     final notifications = <Map<String, dynamic>>[];
 
-    // 1. Transaksi baru (belum di-harvest)
-    QuerySnapshot<Map<String, dynamic>> newTransactions;
+    // 1. Transaksi baru
     try {
-      newTransactions = await _db
-          .collection('transaksi')
+      final newTransactions = await _db.collection('transaksi')
           .where('is_harvest', isEqualTo: false)
-          .orderBy('created_at', descending: true)
-          .limit(10)
-          .get();
-    } catch (e) {
-      // Jika error (mungkin karena index), coba tanpa orderBy
-      newTransactions = await _db
-          .collection('transaksi')
-          .where('is_harvest', isEqualTo: false)
-          .limit(10)
-          .get();
-    }
+          .limit(10).get();
 
-    for (final doc in newTransactions.docs) {
-      final data = doc.data();
-      // Gunakan created_at untuk waktu yang benar
-      final createdAt = (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
-      final namaPelanggan = (data['nama_pelanggan'] ?? 'Pelanggan') as String;
-      
-      notifications.add({
-        'id': 'transaksi_${doc.id}',
-        'title': 'Transaksi Baru',
-        'body': 'Transaksi dari $namaPelanggan menunggu panen',
-        'date': DateFormat('dd MMMM yyyy', 'id_ID').format(createdAt),
-        'time': DateFormat('HH:mm', 'id_ID').format(createdAt),
-        'timestamp': createdAt,
-        'type': 'transaction',
-        'referenceId': doc.id,
-        'isRead': false,
-      });
-    }
+      for (final doc in newTransactions.docs) {
+        final data = doc.data();
+        final createdAt = (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
+        final namaPelanggan = (data['nama_pelanggan'] ?? 'Pelanggan') as String;
+        
+        notifications.add({
+          'id': 'transaksi_${doc.id}',
+          'title': 'Transaksi Baru',
+          'body': 'Transaksi dari $namaPelanggan menunggu panen',
+          'timestamp': createdAt,
+          'date': DateFormat('dd MMM yyyy').format(createdAt),
+          'time': DateFormat('HH:mm').format(createdAt),
+          'type': 'transaction',
+          'referenceId': doc.id,
+          'isRead': false,
+        });
+      }
+    } catch (_) {}
 
-    // 2. Akun baru dibuat (dalam 7 hari terakhir)
+    // 2. Akun baru
     final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
-    QuerySnapshot<Map<String, dynamic>> newAccounts;
     try {
-      newAccounts = await _db
-          .collection('pengguna')
+      final newAccounts = await _db.collection('pengguna')
           .where('created_at', isGreaterThan: Timestamp.fromDate(sevenDaysAgo))
-          .orderBy('created_at', descending: true)
-          .limit(10)
-          .get();
-    } catch (e) {
-      // Jika error (mungkin karena index), coba tanpa orderBy
-      newAccounts = await _db
-          .collection('pengguna')
-          .where('created_at', isGreaterThan: Timestamp.fromDate(sevenDaysAgo))
-          .limit(10)
-          .get();
-    }
+          .limit(10).get();
 
-    for (final doc in newAccounts.docs) {
-      final data = doc.data();
-      final createdAt = (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
-      final namaPengguna = (data['nama_pengguna'] ?? 'Karyawan') as String;
-      final posisi = (data['posisi'] ?? '') as String;
-      
-      notifications.add({
-        'id': 'akun_${doc.id}',
-        'title': 'Akun Baru Dibuat',
-        'body': '$namaPengguna ($posisi) telah terdaftar',
-        'date': DateFormat('dd MMMM yyyy', 'id_ID').format(createdAt),
-        'time': DateFormat('HH:mm', 'id_ID').format(createdAt),
-        'timestamp': createdAt,
-        'type': 'account',
-        'referenceId': doc.id,
-        'isRead': false,
-      });
-    }
-
-    // Sort berdasarkan timestamp terbaru
-    notifications.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
-    
-    return notifications.take(20).toList();
-  }
-
-  /// Notifikasi untuk Petani
-  Future<List<Map<String, dynamic>>> _getFarmerNotifications(String userId, String? plantId) async {
-    final notifications = <Map<String, dynamic>>[];
-
-    if (plantId == null) return notifications;
-
-    // 1. Jadwal perawatan hari ini
-    final today = DateTime.now();
-    final startOfDay = DateTime(today.year, today.month, today.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
-
-    final todaySchedules = await _db
-        .collection('perawatan_tanaman')
-        .where('id_tanaman', isEqualTo: plantId)
-        .where('tanggal', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-        .where('tanggal', isLessThan: Timestamp.fromDate(endOfDay))
-        .get();
-
-    for (final doc in todaySchedules.docs) {
-      final data = doc.data();
-      final tanggal = (data['tanggal'] as Timestamp?)?.toDate() ?? DateTime.now();
-      final namaPerawatan = (data['nama_perawatan'] ?? 'Perawatan') as String;
-      final deskripsi = (data['deskripsi'] ?? '') as String;
-      
-      notifications.add({
-        'id': 'perawatan_${doc.id}',
-        'title': 'Jadwal Perawatan Hari Ini',
-        'body': '$namaPerawatan: $deskripsi',
-        'date': DateFormat('dd MMMM yyyy', 'id_ID').format(tanggal),
-        'time': DateFormat('HH:mm', 'id_ID').format(tanggal),
-        'timestamp': tanggal,
-        'type': 'maintenance',
-        'referenceId': doc.id,
-        'isRead': false,
-      });
-    }
-
-    // 2. Tugas panen (transaksi yang perlu di-harvest)
-    QuerySnapshot<Map<String, dynamic>> harvestTasks;
-    try {
-      harvestTasks = await _db
-          .collection('transaksi')
-          .where('is_harvest', isEqualTo: false)
-          .orderBy('created_at', descending: true)
-          .limit(10)
-          .get();
-    } catch (e) {
-      // Jika error (mungkin karena index), coba tanpa orderBy
-      harvestTasks = await _db
-          .collection('transaksi')
-          .where('is_harvest', isEqualTo: false)
-          .limit(10)
-          .get();
-    }
-
-    for (final doc in harvestTasks.docs) {
-      final data = doc.data();
-      final createdAt = (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
-      final namaPelanggan = (data['nama_pelanggan'] ?? 'Pelanggan') as String;
-      final items = (data['items'] as List?) ?? [];
-      final totalItems = items.fold<int>(0, (sum, item) => sum + ((item['jumlah'] ?? 0) as int));
-      
-      notifications.add({
-        'id': 'panen_${doc.id}',
-        'title': 'Tugas Panen',
-        'body': 'Panen $totalItems item untuk $namaPelanggan',
-        'date': DateFormat('dd MMMM yyyy', 'id_ID').format(createdAt),
-        'time': DateFormat('HH:mm', 'id_ID').format(createdAt),
-        'timestamp': createdAt,
-        'type': 'harvest',
-        'referenceId': doc.id,
-        'isRead': false,
-      });
-    }
-
-    // Sort berdasarkan timestamp terbaru
-    notifications.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
-    
-    return notifications.take(20).toList();
-  }
-
-  /// Notifikasi untuk Staf Logistik
-  Future<List<Map<String, dynamic>>> _getLogisticNotifications() async {
-    final notifications = <Map<String, dynamic>>[];
-
-    // Transaksi yang sudah di-harvest tapi belum di-assign kurir
-    QuerySnapshot<Map<String, dynamic>> readyToShip;
-    try {
-      readyToShip = await _db
-          .collection('transaksi')
-          .where('is_harvest', isEqualTo: true)
-          .where('is_assigned', isEqualTo: false)
-          .orderBy('created_at', descending: true)
-          .limit(10)
-          .get();
-    } catch (e) {
-      // Jika error (mungkin karena index), coba tanpa orderBy
-      readyToShip = await _db
-          .collection('transaksi')
-          .where('is_harvest', isEqualTo: true)
-          .where('is_assigned', isEqualTo: false)
-          .limit(10)
-          .get();
-    }
-
-    for (final doc in readyToShip.docs) {
-      final data = doc.data();
-      final createdAt = (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
-      final namaPelanggan = (data['nama_pelanggan'] ?? 'Pelanggan') as String;
-      final alamat = (data['alamat'] ?? '') as String;
-      
-      notifications.add({
-        'id': 'pengiriman_${doc.id}',
-        'title': 'Siap Dikirim',
-        'body': 'Transaksi dari $namaPelanggan siap untuk dikirim ke $alamat',
-        'date': DateFormat('dd MMMM yyyy', 'id_ID').format(createdAt),
-        'time': DateFormat('HH:mm', 'id_ID').format(createdAt),
-        'timestamp': createdAt,
-        'type': 'shipping',
-        'referenceId': doc.id,
-        'isRead': false,
-      });
-    }
-
-    // Status pengiriman terbaru
-    QuerySnapshot<Map<String, dynamic>> recentShipments;
-    try {
-      recentShipments = await _db
-          .collection('pengiriman')
-          .orderBy('updated_at', descending: true)
-          .limit(10)
-          .get();
-    } catch (e) {
-      // Jika error (mungkin karena index), coba tanpa orderBy
-      recentShipments = await _db
-          .collection('pengiriman')
-          .limit(10)
-          .get();
-    }
-
-    for (final doc in recentShipments.docs) {
-      final data = doc.data();
-      final updatedAt = (data['updated_at'] as Timestamp?)?.toDate() ?? DateTime.now();
-      final status = (data['status_pengiriman'] ?? '') as String;
-      final transaksiId = (data['id_transaksi'] ?? '') as String;
-      
-      // Ambil nama pelanggan dari transaksi
-      String namaPelanggan = 'Pelanggan';
-      if (transaksiId.isNotEmpty) {
-        final transaksiDoc = await _db.collection('transaksi').doc(transaksiId).get();
-        final transaksiData = transaksiDoc.data();
-        namaPelanggan = (transaksiData?['nama_pelanggan'] ?? 'Pelanggan') as String;
+      for (final doc in newAccounts.docs) {
+        final data = doc.data();
+        final createdAt = (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
+        final namaPengguna = (data['nama_pengguna'] ?? 'Karyawan') as String;
+        
+        notifications.add({
+          'id': 'akun_${doc.id}',
+          'title': 'Akun Baru Dibuat',
+          'body': '$namaPengguna telah terdaftar',
+          'timestamp': createdAt,
+          'date': DateFormat('dd MMM yyyy').format(createdAt),
+          'time': DateFormat('HH:mm').format(createdAt),
+          'type': 'account',
+          'referenceId': doc.id,
+          'isRead': false,
+        });
       }
-      
-      notifications.add({
-        'id': 'status_${doc.id}',
-        'title': 'Update Status Pengiriman',
-        'body': 'Pengiriman ke $namaPelanggan: $status',
-        'date': DateFormat('dd MMMM yyyy', 'id_ID').format(updatedAt),
-        'time': DateFormat('HH:mm', 'id_ID').format(updatedAt),
-        'timestamp': updatedAt,
-        'type': 'delivery_status',
-        'referenceId': doc.id,
-        'isRead': false,
-      });
-    }
+    } catch (_) {}
 
-    // Sort berdasarkan timestamp terbaru
-    notifications.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
-    
-    return notifications.take(20).toList();
+    return notifications;
   }
 
-  /// Notifikasi untuk Kurir
-  Future<List<Map<String, dynamic>>> _getCourierNotifications(String courierId) async {
-    final notifications = <Map<String, dynamic>>[];
-
-    // Pengiriman yang ditugaskan ke kurir ini
-    QuerySnapshot<Map<String, dynamic>> assignments;
-    try {
-      assignments = await _db
-          .collection('pengiriman')
-          .where('id_kurir', isEqualTo: courierId)
-          .orderBy('tanggal_pengiriman', descending: true)
-          .limit(10)
-          .get();
-    } catch (e) {
-      // Jika error (mungkin karena index), coba tanpa orderBy
-      assignments = await _db
-          .collection('pengiriman')
-          .where('id_kurir', isEqualTo: courierId)
-          .limit(10)
-          .get();
-    }
-
-    for (final doc in assignments.docs) {
-      final data = doc.data();
-      // Gunakan created_at untuk waktu yang benar
-      final createdAt = (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
-      final status = (data['status_pengiriman'] ?? 'Belum Dikirim') as String;
-      final transaksiId = (data['id_transaksi'] ?? '') as String;
-      
-      // Ambil detail transaksi
-      String namaPelanggan = 'Pelanggan';
-      String alamat = '';
-      if (transaksiId.isNotEmpty) {
-        final transaksiDoc = await _db.collection('transaksi').doc(transaksiId).get();
-        final transaksiData = transaksiDoc.data();
-        namaPelanggan = (transaksiData?['nama_pelanggan'] ?? 'Pelanggan') as String;
-        alamat = (transaksiData?['alamat'] ?? '') as String;
-      }
-      
-      String title = 'Pengiriman Baru';
-      String body = 'Pengiriman ke $namaPelanggan';
-      
-      if (status.toLowerCase().contains('selesai') || status.toLowerCase().contains('terkirim')) {
-        title = 'Pengiriman Selesai';
-        body = 'Pengiriman ke $namaPelanggan telah selesai';
-      } else if (status != 'Belum Dikirim') {
-        title = 'Update Pengiriman';
-        body = 'Status: $status - $namaPelanggan';
-      }
-      
-      notifications.add({
-        'id': 'kurir_${doc.id}',
-        'title': title,
-        'body': body,
-        'date': DateFormat('dd MMMM yyyy', 'id_ID').format(createdAt),
-        'time': DateFormat('HH:mm', 'id_ID').format(createdAt),
-        'timestamp': createdAt,
-        'type': 'delivery',
-        'referenceId': doc.id,
-        'isRead': false,
-      });
-    }
-
-    // Sort berdasarkan timestamp terbaru
-    notifications.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
-    
-    return notifications.take(20).toList();
-  }
-
-  /// Notifikasi untuk Super Admin (gabungan semua notifikasi)
+  /// Notifikasi untuk Super Admin
   Future<List<Map<String, dynamic>>> _getSuperAdminNotifications() async {
     final notifications = <Map<String, dynamic>>[];
-
-    // Gabungkan semua notifikasi dari semua role
     final adminNotif = await _getAdminNotifications();
-    final logisticNotif = await _getLogisticNotifications();
+    
+    // Untuk Logistik di SuperAdmin, kita fetch manual sekali saja (bukan stream)
+    final logisticStream = _getLogisticNotificationsStream();
+    final logisticNotif = await logisticStream.first.catchError((_) => <Map<String,dynamic>>[]);
     
     notifications.addAll(adminNotif);
     notifications.addAll(logisticNotif);
-
-    // Tambahkan label untuk membedakan sumber notifikasi
-    for (var notif in notifications) {
-      if (adminNotif.contains(notif)) {
-        notif['source'] = 'Admin';
-      } else if (logisticNotif.contains(notif)) {
-        notif['source'] = 'Logistik';
-      }
-    }
-
-    // Sort berdasarkan timestamp terbaru
-    notifications.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
     
-    return notifications.take(30).toList();
+    return notifications;
   }
 
-  /// Mark notifikasi sebagai sudah dibaca (opsional, bisa disimpan di Firestore)
-  Future<void> markAsRead(String notificationId) async {
-    // Bisa diimplementasikan dengan menyimpan ke Firestore jika diperlukan
-    // Untuk sekarang, hanya return (karena notifikasi real-time)
-  }
+  Future<void> markAsRead(String notificationId) async {}
 }
-

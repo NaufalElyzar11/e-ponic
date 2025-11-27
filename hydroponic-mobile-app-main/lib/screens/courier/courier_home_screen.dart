@@ -11,15 +11,33 @@ import 'package:hydroponics_app/widgets/delivery_assignment_card.dart';
 import 'package:hydroponics_app/widgets/home_app_bar.dart';
 import 'package:hydroponics_app/services/auth_service.dart';
 import 'package:hydroponics_app/services/shipping_service.dart';
+import 'package:hydroponics_app/services/notification_service.dart'; // Tambahkan import ini
 
-class CourierHomeScreen extends StatefulWidget{
+class CourierHomeScreen extends StatefulWidget {
   const CourierHomeScreen({super.key});
-  
+
   @override
   State<CourierHomeScreen> createState() => _CourierHomeScreenState();
 }
 
 class _CourierHomeScreenState extends State<CourierHomeScreen> {
+  
+  @override
+  void initState() {
+    super.initState();
+    // Mulai mendengarkan notifikasi saat halaman dibuka
+    NotificationService.instance.initialize().then((_) {
+      NotificationService.instance.startListening();
+    });
+  }
+
+  @override
+  void dispose() {
+    // Matikan listener saat halaman ditutup/logout
+    NotificationService.instance.stopListening();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final authUser = FirebaseAuth.instance.currentUser;
@@ -37,8 +55,7 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> {
           .get(),
       builder: (context, userSnap) {
         final uData = userSnap.data?.data() ?? {};
-        final name = (uData['nama_pengguna'] ?? authUser.email ??
-            'Kurir') as String;
+        final name = (uData['nama_pengguna'] ?? authUser.email ?? 'Kurir') as String;
 
         return Scaffold(
           backgroundColor: Colors.white,
@@ -46,7 +63,7 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> {
             preferredSize: const Size.fromHeight(80),
             child: HomeAppBar(
               user: UserModel(
-                username: name, 
+                username: name,
                 role: 'Kurir',
                 onNotificationTap: () {
                   Navigator.pushNamed(context, '/notification');
@@ -57,21 +74,31 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> {
           body: SingleChildScrollView(
             child: Container(
               width: double.infinity,
-              padding: EdgeInsets.symmetric(vertical: 25, horizontal: 10),
+              padding: const EdgeInsets.symmetric(vertical: 25, horizontal: 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text(
+                  const Text(
                     'Daftar Pengiriman',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
-                      fontWeight: FontWeight.bold
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 25,),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      // 1. Panggil fungsi test
+                      await NotificationService.instance.testNotification(
+                        title: 'Test Kurir',
+                        body: 'Halo, ini tes notifikasi lokal!',
+                      );
+                    },
+                    icon: const Icon(Icons.notifications_active),
+                    label: const Text('Cek Notifikasi'),
+                  ),
+                  const SizedBox(height: 25),
                   StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                    stream:
-                        ShippingService.instance.courierAssignmentsStream(authUser.uid),
+                    stream: ShippingService.instance.courierAssignmentsStream(authUser.uid),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
@@ -90,42 +117,33 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> {
                         itemBuilder: (BuildContext context, int index) {
                           final shipDoc = shippingDocs[index];
                           final shipData = shipDoc.data();
-                          final transaksiId =
-                              (shipData['id_transaksi'] ?? '') as String;
+                          final transaksiId = (shipData['id_transaksi'] ?? '') as String;
 
-                          return FutureBuilder<
-                              DocumentSnapshot<Map<String, dynamic>>>(
+                          return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                             future: FirebaseFirestore.instance
                                 .collection('transaksi')
                                 .doc(transaksiId)
                                 .get(),
                             builder: (context, txSnapshot) {
-                              if (txSnapshot.connectionState ==
-                                  ConnectionState.waiting) {
+                              if (txSnapshot.connectionState == ConnectionState.waiting) {
                                 return const SizedBox(
                                   height: 60,
-                                  child: Center(
-                                      child: CircularProgressIndicator()),
+                                  child: Center(child: CircularProgressIndicator()),
                                 );
                               }
 
-                              if (!txSnapshot.hasData ||
-                                  !txSnapshot.data!.exists) {
+                              if (!txSnapshot.hasData || !txSnapshot.data!.exists) {
                                 return const SizedBox();
                               }
 
                               final txData = txSnapshot.data!.data()!;
-                              final items =
-                                  (txData['items'] as List<dynamic>? ??
-                                      <dynamic>[]);
+                              final items = (txData['items'] as List<dynamic>? ?? <dynamic>[]);
 
                               final plantQuantity = items.map((item) {
                                 final m = item as Map<String, dynamic>;
                                 final plant = PlantModel(
-                                  plantName:
-                                      (m['nama_tanaman'] ?? '') as String,
-                                  price: (m['harga'] as num?)?.toDouble() ??
-                                      0.0,
+                                  plantName: (m['nama_tanaman'] ?? '') as String,
+                                  price: (m['harga'] as num?)?.toDouble() ?? 0.0,
                                 );
                                 return PlantQuantityModel(
                                   plant: plant,
@@ -135,31 +153,25 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> {
 
                               final txModel = TransactionModel(
                                 id: transaksiId,
-                                customerName:
-                                    (txData['nama_pelanggan'] ?? '') as String,
+                                customerName: (txData['nama_pelanggan'] ?? '') as String,
                                 plantQuantity: plantQuantity,
                                 address: (txData['alamat'] ?? '') as String,
                                 date: '',
                                 time: '',
                                 isPaid: (txData['is_paid'] ?? false) as bool,
-                                isAssigned:
-                                    (txData['is_assigned'] ?? false) as bool,
-                                isHarvest:
-                                    (txData['is_harvest'] ?? false) as bool,
-                                isDeliver:
-                                    (txData['is_deliver'] ?? false) as bool,
+                                isAssigned: (txData['is_assigned'] ?? false) as bool,
+                                isHarvest: (txData['is_harvest'] ?? false) as bool,
+                                isDeliver: (txData['is_deliver'] ?? false) as bool,
                               );
 
                               final assignment = DeliveryAssigntmentModel(
                                 transaction: txModel,
                                 courier: UserModel(
-                                  username: name, // display only
+                                  username: name,
                                   role: 'Kurir',
                                   onNotificationTap: () {},
                                 ),
-                                isDone: (shipData['status_pengiriman'] ??
-                                            '') ==
-                                        'Selesai',
+                                isDone: (shipData['status_pengiriman'] ?? '') == 'Selesai',
                               );
 
                               return DeliveryAssignmentCard(
@@ -178,8 +190,7 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> {
                             },
                           );
                         },
-                        separatorBuilder:
-                            (BuildContext context, int index) {
+                        separatorBuilder: (BuildContext context, int index) {
                           return const SizedBox(height: 7);
                         },
                       );

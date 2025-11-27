@@ -4,6 +4,7 @@ import 'package:hydroponics_app/screens/farmer/farmer_harvest_screen.dart';
 import 'package:hydroponics_app/screens/farmer/farmer_history_screen.dart';
 import 'package:hydroponics_app/screens/farmer/farmer_home_screen.dart';
 import 'package:hydroponics_app/screens/profile_screen.dart';
+import 'package:hydroponics_app/services/notification_service.dart'; // IMPORT PENTING
 
 class FarmerNavigation extends StatefulWidget{
   const FarmerNavigation({super.key});
@@ -15,7 +16,6 @@ class FarmerNavigation extends StatefulWidget{
 class _FarmerNavigationState extends State<FarmerNavigation> {
   int _selectedIndex = 0;
 
-  // daftar halaman yang akan ditampilkan
   final List<Widget> _halaman = [
     const FarmerHomeScreen(),
     const FarmerHistoryScreen(),
@@ -23,7 +23,22 @@ class _FarmerNavigationState extends State<FarmerNavigation> {
     const ProfileScreen(),
   ];
 
-  // fungsi untuk mengubah index halaman saat item diklik
+  @override
+  void initState() {
+    super.initState();
+    // 1. Inisialisasi Notifikasi di level Navigasi agar aktif di semua tab
+    NotificationService.instance.initialize().then((_) {
+      NotificationService.instance.startListening();
+    });
+  }
+
+  @override
+  void dispose() {
+    // 2. Matikan notifikasi saat user logout/keluar
+    NotificationService.instance.stopListening();
+    super.dispose();
+  }
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -34,11 +49,8 @@ class _FarmerNavigationState extends State<FarmerNavigation> {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
-        // Warna Status Bar (atas)
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
-        
-        // Warna Navigasi (bawah)
         systemNavigationBarColor: Color.fromARGB(255, 231, 255, 237),
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
@@ -54,13 +66,10 @@ class _FarmerNavigationState extends State<FarmerNavigation> {
             BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Tugas Panen'),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
           ],
-
-          type: BottomNavigationBarType.fixed, // Memaksa agar tetap tipe fixed
-
-          selectedItemColor: Color.fromARGB(255, 1, 68, 33), // Warna item aktif
-          unselectedItemColor: Colors.grey, // Warna item tidak aktif
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: const Color.fromARGB(255, 1, 68, 33),
+          unselectedItemColor: Colors.grey,
           backgroundColor: const Color.fromARGB(255, 231, 255, 237),
-
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
         ),
