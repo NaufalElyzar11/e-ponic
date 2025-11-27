@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'package:async/async.dart'; // Tambahkan package ini di pubspec.yaml jika belum ada
+import 'dart:io'; // Penting: Untuk cek Platform
+import 'package:async/async.dart'; // Pastikan package ini ada di pubspec.yaml
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -19,9 +20,10 @@ class NotificationService {
   
   bool _initialized = false;
   
-  // Waktu terakhir kali aplikasi mengecek notifikasi.
-  // Diinisialisasi dengan waktu sekarang agar notifikasi lama (history) tidak muncul.
-  DateTime _lastCheckTime = DateTime.now();
+  // REVISI: Mundurkan waktu cek terakhir 10 detik ke belakang.
+  // Ini memberi toleransi jika ada selisih waktu antara server dan device,
+  // atau jika event terjadi tepat saat aplikasi baru dibuka.
+  DateTime _lastCheckTime = DateTime.now().subtract(const Duration(seconds: 10));
   StreamSubscription? _notificationSubscription;
 
   /// Inisialisasi local notifications
@@ -50,7 +52,7 @@ class NotificationService {
       },
     );
     
-    // 3. Buat Notification Channel (Penting untuk Android 8.0+)
+    // 3. Buat Notification Channel (Android)
     const androidChannel = AndroidNotificationChannel(
       'main_channel', 
       'Notifikasi Aplikasi',
@@ -60,14 +62,18 @@ class NotificationService {
       enableVibration: true,
     );
     
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(androidChannel);
+    final androidImplementation = _localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+        
+    await androidImplementation?.createNotificationChannel(androidChannel);
+
+    // REVISI: Request Permission secara eksplisit (Wajib untuk Android 13+)
+    if (Platform.isAndroid) {
+      await androidImplementation?.requestNotificationsPermission();
+    }
     
     _initialized = true;
-    _lastCheckTime = DateTime.now();
-    
-    print("🔔 NotificationService Initialized. Start Time: $_lastCheckTime");
+    print("🔔 NotificationService Initialized. Last Check Time: $_lastCheckTime");
   }
 
   /// Mulai mendengarkan stream notifikasi
@@ -87,7 +93,6 @@ class NotificationService {
     
     _notificationSubscription = getNotificationsStream().listen((notifications) {
       // 1. Urutkan dari yang Terlama -> Terbaru (Ascending)
-      // Ini penting agar kita memproses urutan waktu dengan benar
       notifications.sort((a, b) => (a['timestamp'] as DateTime).compareTo(b['timestamp'] as DateTime));
 
       DateTime? maxTimestampInBatch; 
@@ -100,7 +105,7 @@ class NotificationService {
         
         // 3. Filter: Hanya tampilkan jika LEBIH BARU dari waktu cek terakhir
         if (timestamp.isAfter(_lastCheckTime)) {
-          print("🚀 TRIGGER NOTIF: $title (Time: $timestamp)");
+          print("🚀 TRIGGER NOTIF: $title (Time: $timestamp vs Last: $_lastCheckTime)");
           
           _showLocalNotification(
             id: data['id'].hashCode,
@@ -119,7 +124,6 @@ class NotificationService {
       }
 
       // 4. Update _lastCheckTime SETELAH semua diproses
-      // Ini mencegah bug di mana data kedua ter-skip karena _lastCheckTime diupdate terlalu cepat
       if (maxTimestampInBatch != null) {
         _lastCheckTime = maxTimestampInBatch!;
         print("✅ Processed $newCount new notifications. Updated Last Check to: $_lastCheckTime");
@@ -274,9 +278,9 @@ class NotificationService {
         });
   }
 
-  /// STREAM Notifikasi untuk Staf Logistik (REVISI: MENGGUNAKAN MERGE STREAM)
+  /// STREAM Notifikasi untuk Staf Logistik (DIPERBAIKI)
   Stream<List<Map<String, dynamic>>> _getLogisticNotificationsStream() {
-    // STREAM 1: Transaksi Siap Dikirim (Logika Lama)
+    // STREAM 1: Transaksi Siap Dikirim (Sesuai Logic Lama)
     final readyToShipStream = _db
         .collection('transaksi')
         .where('is_harvest', isEqualTo: true)
@@ -306,7 +310,8 @@ class NotificationService {
           return notifications;
         });
 
-    // STREAM 2: Status Pengiriman Selesai (Logika Baru - Realtime)
+    // STREAM 2: Status Pengiriman Selesai (Sesuai Logic LogisticDeliveryStatusScreen)
+    // Kita memantau koleksi 'pengiriman' secara langsung
     final deliveryCompletedStream = _db
         .collection('pengiriman')
         .orderBy('updated_at', descending: true)
@@ -326,7 +331,7 @@ class NotificationService {
                 final updatedAt = (data['updated_at'] as Timestamp?)?.toDate() ?? DateTime.now();
                 final transaksiId = (data['id_transaksi'] ?? '') as String;
 
-                // Ambil Nama Pelanggan dari Transaksi
+                // Ambil Nama Pelanggan dari Transaksi untuk detail notifikasi
                 String namaPelanggan = 'Pelanggan';
                 if (transaksiId.isNotEmpty) {
                   try {
@@ -353,11 +358,11 @@ class NotificationService {
            return notifications;
         });
 
-    // Menggabungkan kedua stream agar Logistik menerima notifikasi dari kedua sumber secara realtime
+    // Menggabungkan kedua stream agar Logistik menerima notifikasi dari kedua sumber
     return StreamGroup.merge([readyToShipStream, deliveryCompletedStream]);
   }
 
-  /// STREAM Notifikasi untuk Petani (FIXED)
+  /// STREAM Notifikasi untuk Petani
   Stream<List<Map<String, dynamic>>> _getFarmerNotificationsStream(String userId, String? plantId) {
     if (plantId == null) {
       return Stream.value([]);
@@ -376,14 +381,12 @@ class NotificationService {
             final data = doc.data();
             final items = (data['items'] as List?) ?? [];
             
-            // FILTERING LOKAL: Cek apakah ada item yang ID tanamannya cocok
             bool isMyTask = false;
             int myTotalItems = 0;
             String myPlantName = 'Tanaman';
 
             for (var item in items) {
               final m = item as Map<String, dynamic>;
-              // Bandingkan ID sebagai String
               if (m['id_tanaman'].toString() == plantId.toString()) {
                 isMyTask = true;
                 myTotalItems += (m['jumlah'] ?? 0) as int;
@@ -392,7 +395,6 @@ class NotificationService {
             }
 
             if (isMyTask && myTotalItems > 0) {
-              // Ambil waktu. Prioritas: created_at -> tanggal -> now
               final createdAt = (data['created_at'] as Timestamp?)?.toDate() ?? 
                                 (data['tanggal'] as Timestamp?)?.toDate() ??
                                 DateTime.now();
