@@ -8,6 +8,7 @@ class NoLeadingTextFormField extends StatelessWidget{
   final String? Function(String?)? validator;
   final TextEditingController? controller;
   final List<TextInputFormatter>? inputFormatters;
+  final int? maxLength;
 
   const NoLeadingTextFormField({
     super.key, 
@@ -16,6 +17,7 @@ class NoLeadingTextFormField extends StatelessWidget{
     this.validator,
     this.controller,
     this.inputFormatters,
+    this.maxLength,
   });
 
   @override
@@ -26,6 +28,7 @@ class NoLeadingTextFormField extends StatelessWidget{
       keyboardType: inputType,
       validator: validator,
       inputFormatters: inputFormatters,
+      maxLength: maxLength,
       obscureText: false,
       decoration: InputDecoration(
         hintText: hintText,
@@ -44,7 +47,8 @@ class NoLeadingTextFormField extends StatelessWidget{
             color: AppColors.primary,
             width: 2.0
           )
-        )
+        ),
+        counterText: '', // Sembunyikan counter jika maxLength digunakan
       ),
     );
   }

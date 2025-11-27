@@ -129,9 +129,11 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                       controller: _buyerNameController,
                       hintText: 'Masukkan nama pembeli', 
                       inputType: TextInputType.text,
+                      maxLength: 50, // Batasi maksimal 50 karakter
                       inputFormatters: [
                         // Hanya memperbolehkan huruf, spasi, titik (.), dan dash (-)
                         FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s.\-]')),
+                        LengthLimitingTextInputFormatter(50), // Double check dengan formatter
                       ],
                       validator: (value) {
                         if (value == null || value.isEmpty) {
