@@ -1,6 +1,7 @@
 // lib/widgets/styled_text_form_field.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hydroponics_app/theme/app_colors.dart';
 
 class StyledTextFormField extends StatelessWidget {
@@ -12,6 +13,7 @@ class StyledTextFormField extends StatelessWidget {
   final String? Function(String?)? validator;
   final TextEditingController? controller;
   final bool enabled;
+  final List<TextInputFormatter>? inputFormatters;
 
   const StyledTextFormField({
     super.key,
@@ -23,6 +25,7 @@ class StyledTextFormField extends StatelessWidget {
     this.validator,
     this.controller,
     this.enabled = true,
+    this.inputFormatters,
   });
 
   @override
@@ -32,6 +35,7 @@ class StyledTextFormField extends StatelessWidget {
       validator: validator,
       obscureText: obscureText,
       enabled: enabled,
+      inputFormatters: inputFormatters,
       cursorColor: AppColors.primary,
       decoration: InputDecoration(
         labelText: labelText,

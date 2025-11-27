@@ -13,6 +13,7 @@ class TransactionService {
     required String nama,
     required String alamat,
     String? noHp,
+    String? email,
   }) async {
     final existing = await _db
         .collection('pelanggan')
@@ -22,6 +23,12 @@ class TransactionService {
         .get();
 
     if (existing.docs.isNotEmpty) {
+      // Update email jika ada
+      if (email != null && email.isNotEmpty) {
+        await _db.collection('pelanggan').doc(existing.docs.first.id).update({
+          'email': email,
+        });
+      }
       return existing.docs.first.id;
     }
 
@@ -29,6 +36,7 @@ class TransactionService {
       'nama_pelanggan': nama,
       'alamat': alamat,
       'no_hp': noHp ?? '',
+      'email': email ?? '',
       'created_at': FieldValue.serverTimestamp(),
     });
 
@@ -56,6 +64,7 @@ class TransactionService {
     required String namaPelanggan,
     required String alamat,
     String? noHp,
+    String? email,
     required DateTime tanggal,
     required bool isPaid,
     required Map<String, int> quantities,
@@ -64,6 +73,7 @@ class TransactionService {
       nama: namaPelanggan,
       alamat: alamat,
       noHp: noHp,
+      email: email,
     );
 
     final plantsByName = await _getPlantsByName();
@@ -98,6 +108,7 @@ class TransactionService {
       'id_pelanggan': pelangganId,
       'nama_pelanggan': namaPelanggan,
       'alamat': alamat,
+      'email': email ?? '',
       'tanggal': Timestamp.fromDate(tanggal),
       'is_paid': isPaid,
       'is_assigned': false,
@@ -138,6 +149,7 @@ class TransactionService {
     required String namaPelanggan,
     required String alamat,
     String? noHp,
+    String? email,
     required DateTime tanggal,
     required bool isPaid,
     required Map<String, int> quantities,
@@ -146,6 +158,7 @@ class TransactionService {
       nama: namaPelanggan,
       alamat: alamat,
       noHp: noHp,
+      email: email,
     );
 
     final plantsByName = await _getPlantsByName();
@@ -181,6 +194,7 @@ class TransactionService {
       'id_pelanggan': pelangganId,
       'nama_pelanggan': namaPelanggan,
       'alamat': alamat,
+      'email': email ?? '',
       'tanggal': Timestamp.fromDate(tanggal),
       'is_paid': isPaid,
       'items': items,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -79,9 +80,21 @@ class _AddPlantDataScreenState extends State<AddPlantDataScreen>{
                 controller: _quantityController,
                 hintText: 'Masukkan jumlah bibit', 
                 inputType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(6), // Maksimal 6 digit (999999)
+                ],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Silakan masukkan jumlah bibit yang Anda tanam';
+                  }
+                  final jumlah = int.tryParse(value.trim());
+                  if (jumlah == null || jumlah <= 0) {
+                    return 'Jumlah bibit harus berupa angka lebih dari 0';
+                  }
+                  const maxQuantity = 999999;
+                  if (jumlah > maxQuantity) {
+                    return 'Jumlah bibit melebihi batas maksimum ($maxQuantity)';
                   }
                   return null;
                 },
@@ -150,6 +163,13 @@ class _AddPlantDataScreenState extends State<AddPlantDataScreen>{
     if (jumlah == null || jumlah <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Jumlah bibit harus berupa angka lebih dari 0')),
+      );
+      return;
+    }
+    const maxQuantity = 999999;
+    if (jumlah > maxQuantity) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Jumlah bibit melebihi batas maksimum ($maxQuantity)')),
       );
       return;
     }

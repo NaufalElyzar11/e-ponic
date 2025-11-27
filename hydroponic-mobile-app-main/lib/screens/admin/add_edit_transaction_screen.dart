@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
@@ -29,6 +30,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
   late TextEditingController _kangkungController;
   final TextEditingController _buyerNameController = TextEditingController();
   final TextEditingController _buyerAddressController = TextEditingController();
+  final TextEditingController _buyerEmailController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
 
   DateTime? _selectedDate;
@@ -72,6 +74,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
     _kangkungController.dispose();
     _buyerNameController.dispose();
     _buyerAddressController.dispose();
+    _buyerEmailController.dispose();
     _dateController.dispose();
     super.dispose();
   }
@@ -126,9 +129,21 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                       controller: _buyerNameController,
                       hintText: 'Masukkan nama pembeli', 
                       inputType: TextInputType.text,
+                      inputFormatters: [
+                        // Hanya memperbolehkan huruf, spasi, titik (.), dan dash (-)
+                        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s.\-]')),
+                      ],
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Silakan masukkan nama pembeli';
+                        }
+                        // Validasi: tidak boleh hanya angka
+                        if (RegExp(r'^\d+$').hasMatch(value.trim())) {
+                          return 'Nama tidak boleh hanya angka';
+                        }
+                        // Validasi: harus ada huruf
+                        if (!RegExp(r'[a-zA-Z]').hasMatch(value)) {
+                          return 'Nama harus mengandung huruf';
                         }
                         return null;
                       },
@@ -142,9 +157,21 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                       controller: _buyerAddressController,
                       hintText: 'Masukkan alamat pembeli', 
                       inputType: TextInputType.text,
+                      inputFormatters: [
+                        // Hanya memperbolehkan huruf, angka, spasi, titik (.), koma (,), dan koma atas (')
+                        FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Z0-9\s.,']")),
+                      ],
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Silakan masukkan alamat pembeli';
+                        }
+                        // Validasi: tidak boleh hanya angka
+                        if (RegExp(r'^\d+$').hasMatch(value.trim())) {
+                          return 'Alamat tidak boleh hanya angka';
+                        }
+                        // Validasi: harus ada huruf
+                        if (!RegExp(r'[a-zA-Z]').hasMatch(value)) {
+                          return 'Alamat harus mengandung huruf';
                         }
                         return null;
                       },
@@ -195,6 +222,11 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                                     enabled: isSeladaChecked, 
                                     keyboardType: TextInputType.number,
                                     textAlign: TextAlign.center,
+                                    maxLength: 6, // Maksimal 6 digit (999999)
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                      LengthLimitingTextInputFormatter(6),
+                                    ],
                                     decoration: InputDecoration(
                                       hintText: 'Qty',
                                       filled: true,
@@ -204,6 +236,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                                         borderSide: BorderSide.none,
                                       ),
                                       contentPadding: EdgeInsets.zero,
+                                      counterText: '', // Sembunyikan counter
                                     ),
                                   ),
                                 ),
@@ -233,6 +266,11 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                                     enabled: isPakcoyChecked, // Logic
                                     keyboardType: TextInputType.number,
                                     textAlign: TextAlign.center,
+                                    maxLength: 6, // Maksimal 6 digit (999999)
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                      LengthLimitingTextInputFormatter(6),
+                                    ],
                                     decoration: InputDecoration(
                                       hintText: 'Qty',
                                       filled: true,
@@ -242,6 +280,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                                         borderSide: BorderSide.none,
                                       ),
                                       contentPadding: EdgeInsets.zero,
+                                      counterText: '', // Sembunyikan counter
                                     ),
                                   ),
                                 ),
@@ -271,6 +310,11 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                                     enabled: isKangkungChecked, // Logic
                                     keyboardType: TextInputType.number,
                                     textAlign: TextAlign.center,
+                                    maxLength: 6, // Maksimal 6 digit (999999)
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                      LengthLimitingTextInputFormatter(6),
+                                    ],
                                     decoration: InputDecoration(
                                       hintText: 'Qty',
                                       filled: true,
@@ -280,6 +324,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                                         borderSide: BorderSide.none,
                                       ),
                                       contentPadding: EdgeInsets.zero,
+                                      counterText: '', // Sembunyikan counter
                                     ),
                                   ),
                                 ),
@@ -488,6 +533,7 @@ extension _AddEditTransactionScreenLogic on _AddEditTransactionScreenState {
       
       _buyerNameController.text = (data['nama_pelanggan'] ?? '') as String;
       _buyerAddressController.text = (data['alamat'] ?? '') as String;
+      _buyerEmailController.text = (data['email'] ?? '') as String;
       
       final ts = data['tanggal'] as Timestamp?;
       if (ts != null) {
@@ -622,28 +668,41 @@ extension _AddEditTransactionScreenLogic on _AddEditTransactionScreenState {
       );
     }
 
-    // --- 3.5 VALIDASI STOK (Bagian Baru) ---
+    // --- 3.5 VALIDASI STOK DAN BATAS MAKSIMUM (Bagian Baru) ---
     String stockErrorMessage = '';
+    const int maxQuantity = 999999; // Batas maksimum input
     
     if (isSeladaChecked) {
       final qty = int.tryParse(_seladaController.text) ?? 0;
-      final available = _getStockByName('selada');
-      if (qty > available) {
-        stockErrorMessage += '\n- Stok Selada tidak cukup (Tersedia: $available).';
+      if (qty > maxQuantity) {
+        stockErrorMessage += '\n- Jumlah Selada melebihi batas maksimum ($maxQuantity).';
+      } else {
+        final available = _getStockByName('selada');
+        if (qty > available) {
+          stockErrorMessage += '\n- Stok Selada tidak cukup (Tersedia: $available).';
+        }
       }
     }
     if (isPakcoyChecked) {
       final qty = int.tryParse(_pakcoyController.text) ?? 0;
-      final available = _getStockByName('pakcoy');
-      if (qty > available) {
-        stockErrorMessage += '\n- Stok Pakcoy tidak cukup (Tersedia: $available).';
+      if (qty > maxQuantity) {
+        stockErrorMessage += '\n- Jumlah Pakcoy melebihi batas maksimum ($maxQuantity).';
+      } else {
+        final available = _getStockByName('pakcoy');
+        if (qty > available) {
+          stockErrorMessage += '\n- Stok Pakcoy tidak cukup (Tersedia: $available).';
+        }
       }
     }
     if (isKangkungChecked) {
       final qty = int.tryParse(_kangkungController.text) ?? 0;
-      final available = _getStockByName('kangkung');
-      if (qty > available) {
-        stockErrorMessage += '\n- Stok Kangkung tidak cukup (Tersedia: $available).';
+      if (qty > maxQuantity) {
+        stockErrorMessage += '\n- Jumlah Kangkung melebihi batas maksimum ($maxQuantity).';
+      } else {
+        final available = _getStockByName('kangkung');
+        if (qty > available) {
+          stockErrorMessage += '\n- Stok Kangkung tidak cukup (Tersedia: $available).';
+        }
       }
     }
 
@@ -727,6 +786,7 @@ extension _AddEditTransactionScreenLogic on _AddEditTransactionScreenState {
           transactionId: widget.transactionId!,
           namaPelanggan: _buyerNameController.text.trim(),
           alamat: _buyerAddressController.text.trim(),
+          email: _buyerEmailController.text.trim(),
           tanggal: _selectedDate!,
           isPaid: _selectedPaymentStatus == 'Lunas',
           quantities: quantities,
@@ -741,6 +801,7 @@ extension _AddEditTransactionScreenLogic on _AddEditTransactionScreenState {
         await TransactionService.instance.createTransactionWithDetails(
           namaPelanggan: _buyerNameController.text.trim(),
           alamat: _buyerAddressController.text.trim(),
+          email: _buyerEmailController.text.trim(),
           tanggal: _selectedDate!,
           isPaid: _selectedPaymentStatus == 'Lunas',
           quantities: quantities,

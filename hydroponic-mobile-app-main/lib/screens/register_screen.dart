@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:hydroponics_app/theme/app_colors.dart';
@@ -102,9 +103,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       labelText: 'Nama Pengguna',
                       hintText: 'Masukkan nama pengguna',
                       prefixIcon: Icons.person,
+                      inputFormatters: [
+                        // Hanya memperbolehkan huruf, spasi, titik (.), dan dash (-)
+                        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s.\-]')),
+                      ],
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Silakan masukkan nama pengguna';
+                        }
+                        // Validasi: tidak boleh hanya angka
+                        if (RegExp(r'^\d+$').hasMatch(value.trim())) {
+                          return 'Nama tidak boleh hanya angka';
+                        }
+                        // Validasi: harus ada huruf
+                        if (!RegExp(r'[a-zA-Z]').hasMatch(value)) {
+                          return 'Nama harus mengandung huruf';
                         }
                         return null;
                       },
@@ -115,11 +128,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     StyledTextFormField(
                       controller: _emailController,
                       labelText: 'Email',
-                      hintText: 'Masukkan email karyawan',
+                      hintText: 'contoh@email.com',
                       prefixIcon: Icons.email,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Silakan masukkan email';
+                        }
+                        final email = value.trim().toLowerCase();
+                        // Validasi: harus berakhiran @gmail.com atau @*.ac.id (misalnya @ulm.ac.id)
+                        final isGmail = email.endsWith('@gmail.com');
+                        final isAcId = RegExp(r'@[a-zA-Z0-9.-]+\.ac\.id$').hasMatch(email);
+                        
+                        if (!isGmail && !isAcId) {
+                          return 'Email harus berakhiran @gmail.com atau @*.ac.id';
+                        }
+                        // Validasi format email dasar
+                        if (!RegExp(r'^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email)) {
+                          return 'Format email tidak valid';
                         }
                         return null;
                       },
@@ -196,12 +221,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     StyledTextFormField(
                       controller: _passwordController,
                       labelText: 'Kata Sandi',
-                      hintText: 'Masukkan kata sandi',
+                      hintText: 'Minimal 6 karakter, huruf & angka',
                       prefixIcon: Icons.lock_outline_rounded,
                       obscureText: !_isPasswordVisible,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Silakan masukkan kata sandi';
+                        }
+                        // Validasi: minimal 6 karakter
+                        if (value.length < 6) {
+                          return 'Kata sandi minimal 6 karakter';
+                        }
+                        // Validasi: harus ada huruf
+                        if (!RegExp(r'[a-zA-Z]').hasMatch(value)) {
+                          return 'Kata sandi harus mengandung huruf';
+                        }
+                        // Validasi: harus ada angka
+                        if (!RegExp(r'[0-9]').hasMatch(value)) {
+                          return 'Kata sandi harus mengandung angka';
                         }
                         return null;
                       },

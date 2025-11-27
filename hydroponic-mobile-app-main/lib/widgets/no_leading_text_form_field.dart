@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hydroponics_app/theme/app_colors.dart';
 
 class NoLeadingTextFormField extends StatelessWidget{
@@ -6,6 +7,7 @@ class NoLeadingTextFormField extends StatelessWidget{
   final TextInputType inputType;
   final String? Function(String?)? validator;
   final TextEditingController? controller;
+  final List<TextInputFormatter>? inputFormatters;
 
   const NoLeadingTextFormField({
     super.key, 
@@ -13,6 +15,7 @@ class NoLeadingTextFormField extends StatelessWidget{
     required this.inputType, 
     this.validator,
     this.controller,
+    this.inputFormatters,
   });
 
   @override
@@ -22,6 +25,7 @@ class NoLeadingTextFormField extends StatelessWidget{
       cursorColor: AppColors.primary,
       keyboardType: inputType,
       validator: validator,
+      inputFormatters: inputFormatters,
       obscureText: false,
       decoration: InputDecoration(
         hintText: hintText,
