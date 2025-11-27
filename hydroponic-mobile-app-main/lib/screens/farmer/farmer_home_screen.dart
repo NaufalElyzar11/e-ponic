@@ -176,17 +176,13 @@ class _FarmerHomeContent extends StatelessWidget {
         }
 
         // STREAM 2: Mengambil Data Panen (Pengurang)
-        // Kita perlu stream ini di dalam agar bisa menghitung selisihnya
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: FirebaseFirestore.instance
               .collection('data_panen')
               .where('id_petani', isEqualTo: info.uid)
-              // Filter berdasarkan id_petani karena asumsinya petani hanya pegang 1 jenis tanaman
-              // Jika di data_panen ada id_tanaman, tambahkan .where('id_tanaman', isEqualTo: info.plantId)
               .snapshots(),
           builder: (context, snapshotPanen) {
             
-            // Hitung Total yang sudah dipanen
             int totalSudahPanen = 0;
             if (snapshotPanen.hasData) {
               final panenDocs = snapshotPanen.data!.docs;
@@ -196,171 +192,198 @@ class _FarmerHomeContent extends StatelessWidget {
               );
             }
 
-            // --- LOGIKA HITUNG STOK AKHIR ---
-            // Stok = Total Tanam - Total Panen
             int stokSaatIni = totalBibitDitanam - totalSudahPanen;
-            
-            // Aturan: Jika negatif, jadikan 0
-            if (stokSaatIni < 0) {
-              stokSaatIni = 0;
-            }
+            if (stokSaatIni < 0) stokSaatIni = 0;
 
             bool isLoading = snapshotTanam.connectionState == ConnectionState.waiting || 
                              snapshotPanen.connectionState == ConnectionState.waiting;
 
-            return SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(15),
-                    color: const Color.fromARGB(255, 1, 68, 33),
-                    width: double.infinity,
-                    child: isLoading
-                        ? const Center(
-                            child: CircularProgressIndicator(color: Colors.white))
-                        : FarmerTotalPlantCard(
-                            header: 'Total Bibit Ditanam',
-                            // Menampilkan hasil pengurangan (Stok Aktual)
-                            plantCount: stokSaatIni, 
-                          ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        StyledElevatedButton(
-                          text: 'Tambah Data Tanaman ',
-                          onPressed: () {
-                            Navigator.pushNamed(context, '/add_plant_data');
-                          },
-                          foregroundColor: Colors.white,
-                          backgroundColor: const Color.fromARGB(255, 1, 68, 33),
-                          icon: Icons.add,
-                        ),
-                        const SizedBox(height: 15),
-                        const Text(
-                          'Daftar Jadwal Hari Ini',
-                          style:
-                              TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                        ),
-                        if (isDateMissing)
-                          const Padding(
-                            padding: EdgeInsets.only(top: 8.0),
-                            child: Text(
-                              'Info: Tanggal tanam tidak ditemukan. Simulasi jadwal hari ini.',
-                              style: TextStyle(color: Colors.orange, fontSize: 12),
-                            ),
-                          ),
-                        const SizedBox(height: 10),
-                        if (isLoading)
-                          const Center(child: CircularProgressIndicator())
-                        else if (info.plantId == null)
-                          const Text('Akun petani belum terhubung dengan tanaman.')
-                        else if (stokSaatIni == 0 && totalBibitDitanam == 0)
-                          // Kondisi jika belum pernah tanam sama sekali
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Row(
-                              children: [
-                                Icon(Icons.info_outline, color: Colors.grey),
-                                SizedBox(width: 10),
-                                Expanded(
-                                    child: Text(
-                                  'Data bibit kosong. Silakan input "Data Tanam".',
-                                  style: TextStyle(
-                                      fontStyle: FontStyle.italic,
-                                      color: Colors.grey),
-                                )),
-                              ],
-                            ),
-                          )
-                        else
-                          // Stream Jadwal Perawatan (Tetap sama seperti sebelumnya)
-                          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                            stream: FirebaseFirestore.instance
-                                .collection('jadwal_perawatan')
-                                .where('id_petani', isEqualTo: info.uid)
-                                .where('id_tanaman', isEqualTo: info.plantId)
-                                .snapshots(),
-                            builder: (context, statusSnap) {
-                              final statusDocs = statusSnap.data?.docs ?? [];
-                              final Map<String, bool> statusMap = {};
-                              for (final doc in statusDocs) {
-                                final d = doc.data();
-                                final field = (d['field'] ?? '') as String;
-                                final recordedTanamId = (d['id_data_tanam'] ?? '') as String; 
-                                final ts = d['tanggal'] as Timestamp?;
-                                final date = ts?.toDate();
-                                if (field.isEmpty || date == null) continue;
-                                
-                                final key =
-                                    '${field}_${DateFormat('yyyy-MM-dd').format(date.toLocal())}_$recordedTanamId';
-                                statusMap[key] = (d['is_done'] ?? false) as bool;
-                              }
+            // STREAM 3: Mengambil Data Tanaman (Agar masa_tanam bisa dipakai di Card & Schedule)
+            // Kita pindahkan ke sini agar variabel masa_tanam bisa dipakai untuk hitung "Siap Panen"
+            return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+              stream: info.plantId != null 
+                  ? FirebaseFirestore.instance.collection('tanaman').doc(info.plantId).snapshots()
+                  : null,
+              builder: (context, snapshotTanaman) {
+                
+                // Helper ambil data tanaman
+                final tanamanData = snapshotTanaman.data?.data() ?? {};
+                int getInterval(String field) {
+                  final val = tanamanData[field];
+                  if (val is int) return val;
+                  if (val is String) return int.tryParse(val) ?? 1;
+                  return 1;
+                }
+                final masaTanam = getInterval('masa_tanam');
 
-                              return StreamBuilder<
-                                  DocumentSnapshot<Map<String, dynamic>>>(
+                // --- LOGIKA HITUNG SIAP PANEN ---
+                int totalSiapPanenRaw = 0; // Total input yang sudah melewati masa tanam
+                final now = DateTime.now();
+                final today = DateTime(now.year, now.month, now.day);
+
+                for (var doc in sortedDocs) {
+                  final data = doc.data();
+                  final jumlah = (data['jumlah_tanam'] as int? ?? 0);
+                  
+                  DateTime? tglTanam;
+                  final raw = data['tanggal_tanam'];
+                  if (raw is Timestamp) tglTanam = raw.toDate();
+                  else if (raw is String) tglTanam = DateTime.tryParse(raw);
+
+                  if (tglTanam != null) {
+                    final estimasiPanen = tglTanam.add(Duration(days: masaTanam));
+                    final estimasiDate = DateTime(estimasiPanen.year, estimasiPanen.month, estimasiPanen.day);
+                    
+                    // Jika estimasi <= hari ini, berarti sudah masuk masa siap panen
+                    if (estimasiDate.compareTo(today) <= 0) {
+                      totalSiapPanenRaw += jumlah;
+                    }
+                  }
+                }
+
+                // Siap Panen Bersih = (Yang sudah tua) - (Yang sudah dipanen)
+                int stokSiapPanen = totalSiapPanenRaw - totalSudahPanen;
+                if (stokSiapPanen < 0) stokSiapPanen = 0;
+                // Cap agar tidak melebihi stok total aktual
+                if (stokSiapPanen > stokSaatIni) stokSiapPanen = stokSaatIni;
+
+                return SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(15),
+                        color: const Color.fromARGB(255, 1, 68, 33),
+                        width: double.infinity,
+                        // --- PERUBAHAN DI SINI ---
+                        child: isLoading
+                            ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                            : SingleChildScrollView(
+                                scrollDirection: Axis.horizontal, // Aktifkan scroll horizontal
+                                child: Row(
+                                  children: [
+                                    // KARTU 1: Total Stok Aktual
+                                    SizedBox(
+                                      // Atur lebar kartu, misalnya 75% dari lebar layar agar terlihat card berikutnya
+                                      width: MediaQuery.of(context).size.width * 0.75, 
+                                      child: FarmerTotalPlantCard(
+                                        header: 'Total Bibit Ditanam',
+                                        plantCount: stokSaatIni,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 15), // Jarak antar kartu
+                                    
+                                    // KARTU 2: Total Siap Panen
+                                    SizedBox(
+                                      width: MediaQuery.of(context).size.width * 0.75,
+                                      child: FarmerTotalPlantCard(
+                                        header: 'Siap Panen',
+                                        plantCount: stokSiapPanen,
+                                        plantIcon: Icons.inventory_2_outlined,
+                                      ),
+                                    ),
+                                    // Tambahkan SizedBox di akhir agar ada jarak saat discroll mentok kanan
+                                    const SizedBox(width: 5),
+                                  ],
+                                ),
+                              ),
+                        // -------------------------
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            StyledElevatedButton(
+                              text: 'Tambah Data Tanaman ',
+                              onPressed: () {
+                                Navigator.pushNamed(context, '/add_plant_data');
+                              },
+                              foregroundColor: Colors.white,
+                              backgroundColor: const Color.fromARGB(255, 1, 68, 33),
+                              icon: Icons.add,
+                            ),
+                            const SizedBox(height: 15),
+                            const Text(
+                              'Daftar Jadwal Hari Ini',
+                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                            ),
+                            if (isDateMissing)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 8.0),
+                                child: Text(
+                                  'Info: Tanggal tanam tidak ditemukan. Simulasi jadwal hari ini.',
+                                  style: TextStyle(color: Colors.orange, fontSize: 12),
+                                ),
+                              ),
+                            const SizedBox(height: 10),
+                            if (isLoading)
+                              const Center(child: CircularProgressIndicator())
+                            else if (info.plantId == null)
+                              const Text('Akun petani belum terhubung dengan tanaman.')
+                            else if (stokSaatIni == 0 && totalBibitDitanam == 0)
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.info_outline, color: Colors.grey),
+                                    SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        'Data bibit kosong. Silakan input "Data Tanam".',
+                                        style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            else
+                              // STREAM 4: Jadwal Perawatan (Untuk status is_done)
+                              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                                 stream: FirebaseFirestore.instance
-                                    .collection('tanaman')
-                                    .doc(info.plantId)
+                                    .collection('jadwal_perawatan')
+                                    .where('id_petani', isEqualTo: info.uid)
+                                    .where('id_tanaman', isEqualTo: info.plantId)
                                     .snapshots(),
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return const Padding(
-                                      padding: EdgeInsets.all(20.0),
-                                      child: Center(
-                                          child: CircularProgressIndicator()),
-                                    );
+                                builder: (context, statusSnap) {
+                                  final statusDocs = statusSnap.data?.docs ?? [];
+                                  final Map<String, bool> statusMap = {};
+                                  for (final doc in statusDocs) {
+                                    final d = doc.data();
+                                    final field = (d['field'] ?? '') as String;
+                                    final recordedTanamId = (d['id_data_tanam'] ?? '') as String; 
+                                    final ts = d['tanggal'] as Timestamp?;
+                                    final date = ts?.toDate();
+                                    if (field.isEmpty || date == null) continue;
+                                    
+                                    final key = '${field}_${DateFormat('yyyy-MM-dd').format(date.toLocal())}_$recordedTanamId';
+                                    statusMap[key] = (d['is_done'] ?? false) as bool;
                                   }
 
-                                  if (!snapshot.hasData || !snapshot.data!.exists) {
-                                    return const Text(
-                                        'Data jenis tanaman tidak ditemukan.');
-                                  }
+                                  // Di sini kita TIDAK perlu StreamBuilder tanaman lagi, 
+                                  // karena datanya sudah diambil di Stream 3 di atas.
+                                  // Kita langsung pakai variabel 'tanamanData' dan fungsi helper yang sudah didefinisikan di atas.
 
-                                  final data = snapshot.data!.data() ?? {};
-
-                                  int getInterval(String field) {
-                                    final val = data[field];
-                                    if (val is int) return val;
-                                    if (val is String) {
-                                      return int.tryParse(val) ?? 1;
-                                    }
-                                    return 1;
-                                  }
-
-                                  final intervalAir = getInterval(
-                                      'jadwal_pengecekan_air_dan_nutrisi');
-                                  final intervalCek =
-                                      getInterval('jadwal_pengecekan_tanaman');
-                                  final intervalBersih =
-                                      getInterval('jadwal_pembersihan_instalasi');
-                                  final masaTanam = getInterval('masa_tanam');
+                                  final intervalAir = getInterval('jadwal_pengecekan_air_dan_nutrisi');
+                                  final intervalCek = getInterval('jadwal_pengecekan_tanaman');
+                                  final intervalBersih = getInterval('jadwal_pembersihan_instalasi');
+                                  // masaTanam sudah diambil di atas
 
                                   // Logika Modulo (Sisa Bagi)
-                                  DateTime calculateNextDate(
-                                      int interval, DateTime startDate) {
+                                  DateTime calculateNextDate(int interval, DateTime startDate) {
                                     final now = DateTime.now();
                                     final today = DateTime(now.year, now.month, now.day);
                                     final start = DateTime(startDate.year, startDate.month, startDate.day);
 
                                     if (interval <= 0) return today.add(const Duration(days: 1));
-
                                     int diff = today.difference(start).inDays;
-
-                                    if (diff < 0) {
-                                      return start.add(Duration(days: interval));
-                                    }
+                                    if (diff < 0) return start.add(Duration(days: interval));
 
                                     int remainder = diff % interval;
-                                    
                                     DateTime candidate;
                                     if (remainder == 0) {
                                       candidate = today;
@@ -368,34 +391,27 @@ class _FarmerHomeContent extends StatelessWidget {
                                       int daysToNext = interval - remainder;
                                       candidate = today.add(Duration(days: daysToNext));
                                     }
-
                                     if (candidate.isAtSameMomentAs(start)) {
                                       candidate = candidate.add(Duration(days: interval));
                                     }
-                                    
                                     return candidate;
                                   }
 
-                                  final baseDate =
-                                      tanggalTanamAwal ?? DateTime.now();
-                                  
+                                  final baseDate = tanggalTanamAwal ?? DateTime.now();
                                   final activeTanamId = currentTanamId ?? '';
 
-                                  DateTime dateAir =
-                                      calculateNextDate(intervalAir, baseDate);
-                                  DateTime dateCek =
-                                      calculateNextDate(intervalCek, baseDate);
-                                  DateTime dateBersih =
-                                      calculateNextDate(intervalBersih, baseDate);
+                                  DateTime dateAir = calculateNextDate(intervalAir, baseDate);
+                                  DateTime dateCek = calculateNextDate(intervalCek, baseDate);
+                                  DateTime dateBersih = calculateNextDate(intervalBersih, baseDate);
 
                                   final List<PlantMaintenanceModel> schedules = [];
-                                  final List<Map<String, dynamic>> alarmData = []; // Untuk menyimpan data alarm
+                                  final List<Map<String, dynamic>> alarmData = [];
                               
                                   bool isToday(DateTime date) {
                                     final now = DateTime.now();
                                     return date.year == now.year &&
-                                           date.month == now.month &&
-                                           date.day == now.day;
+                                          date.month == now.month &&
+                                          date.day == now.day;
                                   }
 
                                   void addSchedule({
@@ -407,24 +423,21 @@ class _FarmerHomeContent extends StatelessWidget {
                                   }) {
                                     if (!isToday(date)) return;
 
-                                    final key =
-                                        '${field}_${DateFormat('yyyy-MM-dd').format(date.toLocal())}_$specificTanamId';
+                                    final key = '${field}_${DateFormat('yyyy-MM-dd').format(date.toLocal())}_$specificTanamId';
                                     final isDone = statusMap[key] ?? false;
 
-                                // Simpan data untuk alarm
-                                alarmData.add({
-                                  'id': schedules.length + 1,
-                                  'title': title,
-                                  'body': description,
-                                  'date': date,
-                                });
+                                    alarmData.add({
+                                      'id': schedules.length + 1,
+                                      'title': title,
+                                      'body': description,
+                                      'date': date,
+                                    });
 
                                     schedules.add(
                                       PlantMaintenanceModel(
                                         maintenanceName: title,
                                         description: description,
-                                        date: DateFormat('dd MMMM yyyy')
-                                            .format(date),
+                                        date: DateFormat('dd MMMM yyyy').format(date),
                                         time: '09:00',
                                         isDone: isDone,
                                         onTap: () {
@@ -450,8 +463,7 @@ class _FarmerHomeContent extends StatelessWidget {
                                   addSchedule(
                                     field: 'jadwal_pengecekan_air_dan_nutrisi',
                                     title: 'Pengecekan Air & Nutrisi',
-                                    description:
-                                        'Cek kualitas air dan tambah nutrisi bila diperlukan.',
+                                    description: 'Cek kualitas air dan tambah nutrisi bila diperlukan.',
                                     date: dateAir,
                                     specificTanamId: activeTanamId,
                                   );
@@ -459,8 +471,7 @@ class _FarmerHomeContent extends StatelessWidget {
                                   addSchedule(
                                     field: 'jadwal_pengecekan_tanaman',
                                     title: 'Pengecekan Tanaman',
-                                    description:
-                                        'Periksa kondisi tanaman dan identifikasi hama/penyakit.',
+                                    description: 'Periksa kondisi tanaman dan identifikasi hama/penyakit.',
                                     date: dateCek,
                                     specificTanamId: activeTanamId,
                                   );
@@ -468,8 +479,7 @@ class _FarmerHomeContent extends StatelessWidget {
                                   addSchedule(
                                     field: 'jadwal_pembersihan_instalasi',
                                     title: 'Pembersihan Instalasi',
-                                    description:
-                                        'Bersihkan pipa dan instalasi hidroponik dari kotoran.',
+                                    description: 'Bersihkan pipa dan instalasi hidroponik dari kotoran.',
                                     date: dateBersih,
                                     specificTanamId: activeTanamId,
                                   );
@@ -488,28 +498,23 @@ class _FarmerHomeContent extends StatelessWidget {
                                     }
 
                                     if (tglTanam != null) {
-                                      final panenDate = tglTanam
-                                          .add(Duration(days: masaTanam));
+                                      final panenDate = tglTanam.add(Duration(days: masaTanam));
                                       
                                       if (!isToday(panenDate)) continue;
 
                                       addSchedule(
                                         field: 'estimasi_panen',
                                         title: 'Estimasi Panen',
-                                        description:
-                                            'Waktunya panen berdasarkan masa tanam!',
+                                        description: 'Waktunya panen berdasarkan masa tanam!',
                                         date: panenDate,
                                         specificTanamId: thisDocId,
                                       );
                                     }
                                   }
 
-                              // Schedule alarm untuk semua jadwal hari ini (async, tidak blocking UI)
-                              if (alarmData.isNotEmpty) {
-                                _scheduleAlarmsAsync(alarmData);
-                              } else {
-                                print('ℹ️ No alarms to schedule (no schedules for today)');
-                              }
+                                  if (alarmData.isNotEmpty) {
+                                    _scheduleAlarmsAsync(alarmData);
+                                  }
 
                                   if (schedules.isEmpty) {
                                     return Container(
@@ -610,18 +615,18 @@ class _FarmerHomeContent extends StatelessWidget {
                                             maintenance: schedules[index],
                                           );
                                         },
-                                  ),
-                                ],
+                                      ),
+                                    ],
                                   );
                                 },
-                              );
-                            },
-                          ),
-                      ],
-                    ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             );
           }
         );
@@ -629,7 +634,6 @@ class _FarmerHomeContent extends StatelessWidget {
     );
   }
 
-  /// Schedule alarm secara async (tidak blocking UI)
   void _scheduleAlarmsAsync(List<Map<String, dynamic>> alarmData) {
     debugPrint('📅 Scheduling ${alarmData.length} alarms for today...');
     AlarmService.instance.scheduleTodayAlarms(

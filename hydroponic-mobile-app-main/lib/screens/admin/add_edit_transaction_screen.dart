@@ -37,6 +37,9 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
 
   // harga sayur per jenis, di-load dari koleksi `tanaman`
   Map<String, double> _prices = {};
+  // Menyimpan stok siap panen: Map<NamaTanaman, JumlahSiapPanen>
+  Map<String, int> _readyStocks = {}; 
+  
   double _totalPrice = 0.0;
 
   @override
@@ -52,6 +55,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
     _kangkungController.addListener(_recalculateTotal);
 
     _loadPrices();
+    _loadReadyStocks(); // Load data stok saat init
     
     // Load transaction data if editing
     if (widget.transactionId != null) {
@@ -103,7 +107,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
         child: Container(
-          padding: EdgeInsetsGeometry.all(15),
+          padding: EdgeInsetsGeometry.only(left: 15, right: 15, top: 15, bottom: 40),
           child: Form(
             key: _formKey,
             child: Card(
@@ -152,6 +156,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                     ),
                     StyledDatePickerField(
                       controller: _dateController,
+                      lastDate: DateTime.now(), // Membatasi input hanya sampai hari ini
                       onDateSelected: (date) {
                         _selectedDate = date;
                       },
@@ -170,7 +175,6 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                             // --- Baris untuk SELADA ---
                             Row(
                               children: [
-                                // 1. Checkbox
                                 Checkbox(
                                   value: isSeladaChecked,
                                   activeColor: AppColors.primary,
@@ -181,28 +185,19 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                                 _recalculateTotal();
                                   },
                                 ),
-                                
-                                // 2. Label
                                 Text('Selada', style: TextStyle(fontSize: 16)),
-                                
-                                // 3. Spacer
-                                // Ini akan mendorong TextField ke paling kanan
                                 Expanded(child: Container()), 
-                                
-                                // 4. TextField Kuantitas
                                 SizedBox(
                                   width: 80,
                                   height: 40,
                                   child: TextField(
                                     controller: _seladaController,
-                                    // Kunci Logika: TextField hanya aktif jika di-centang
                                     enabled: isSeladaChecked, 
                                     keyboardType: TextInputType.number,
                                     textAlign: TextAlign.center,
                                     decoration: InputDecoration(
                                       hintText: 'Qty',
                                       filled: true,
-                                      // Ganti warna jika non-aktif
                                       fillColor: isSeladaChecked ? Colors.white : Colors.grey[300],
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(8),
@@ -312,7 +307,11 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                         child: Padding(
                           padding: EdgeInsetsGeometry.all(10),
                           child: Text(
-                            'Rp ${_totalPrice.toStringAsFixed(0)}',
+                            // --- PERUBAHAN DI SINI: Format Currency ---
+                            NumberFormat.currency(
+                              locale: 'id_ID', 
+                              symbol: 'Rp ', 
+                            ).format(_totalPrice),
                             style: TextStyle(color: Colors.white),
                           ),
                         ),
@@ -371,6 +370,97 @@ extension on String {
 }
 
 extension _AddEditTransactionScreenLogic on _AddEditTransactionScreenState {
+  // --- FUNGSI BARU: Load Stok Siap Panen ---
+  Future<void> _loadReadyStocks() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('tanaman').get();
+      final Map<String, int> stocks = {};
+      
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final name = (data['nama_tanaman'] ?? '') as String;
+        final id = doc.id;
+        final masaTanam = (data['masa_tanam'] ?? 0) as int;
+        
+        if (name.isNotEmpty) {
+          // Hitung stok siap panen untuk tanaman ini
+          stocks[name] = await _calculateStockForPlant(id, masaTanam);
+        }
+      }
+      
+      if (mounted) {
+        setState(() {
+          _readyStocks = stocks;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading stocks: $e');
+    }
+  }
+
+  // Helper untuk hitung stok (Logic mirip dengan PlantStatusScreen)
+  Future<int> _calculateStockForPlant(String plantId, int masaTanam) async {
+    int totalTanamSemua = 0;
+    int totalTanamMatang = 0; 
+    int totalPanen = 0;
+
+    final now = DateTime.now();
+
+    // 1. Data Tanam
+    final tanamSnap = await FirebaseFirestore.instance
+        .collection('data_tanam')
+        .where('id_tanaman', isEqualTo: plantId)
+        .get();
+    
+    for (final doc in tanamSnap.docs) {
+      final jumlah = (doc.data()['jumlah_tanam'] as int? ?? 0);
+      final Timestamp? ts = doc.data()['tanggal_tanam'] as Timestamp?;
+      
+      totalTanamSemua += jumlah;
+
+      if (ts != null) {
+        final tanggalTanam = ts.toDate();
+        final selisihHari = now.difference(tanggalTanam).inDays;
+        if (selisihHari >= masaTanam) {
+          totalTanamMatang += jumlah;
+        }
+      }
+    }
+
+    // 2. Data Panen
+    final panenSnap = await FirebaseFirestore.instance
+        .collection('data_panen')
+        .where('id_tanaman', isEqualTo: plantId)
+        .get();
+    
+    for (final doc in panenSnap.docs) {
+      totalPanen += (doc.data()['jumlah_panen'] as int? ?? 0);
+    }
+
+    // 3. Hitung Sisa Siap Panen
+    int sisaTanamanFisik = totalTanamSemua - totalPanen;
+    if (sisaTanamanFisik < 0) sisaTanamanFisik = 0;
+
+    // Ready = Matang - Panen
+    int sisaSiapPanen = totalTanamMatang - totalPanen;
+    if (sisaSiapPanen < 0) sisaSiapPanen = 0;
+    
+    // Safety: Siap panen tidak boleh melebihi sisa fisik tanaman
+    if (sisaSiapPanen > sisaTanamanFisik) sisaSiapPanen = sisaTanamanFisik;
+
+    return sisaSiapPanen;
+  }
+
+  // Helper untuk mendapatkan stok berdasarkan nama (case insensitive partial match)
+  int _getStockByName(String partialName) {
+    for (var entry in _readyStocks.entries) {
+      if (entry.key.toLowerCase().contains(partialName.toLowerCase())) {
+        return entry.value;
+      }
+    }
+    return 0; // Default jika tidak ketemu
+  }
+
   Future<void> _loadTransactionData() async {
     if (widget.transactionId == null) return;
 
@@ -396,36 +486,32 @@ extension _AddEditTransactionScreenLogic on _AddEditTransactionScreenState {
 
       final data = doc.data()!;
       
-      // Load buyer data
       _buyerNameController.text = (data['nama_pelanggan'] ?? '') as String;
       _buyerAddressController.text = (data['alamat'] ?? '') as String;
       
-      // Load date
       final ts = data['tanggal'] as Timestamp?;
       if (ts != null) {
         _selectedDate = ts.toDate();
         _dateController.text = DateFormat('dd MMM yyyy').format(_selectedDate!);
       }
       
-      // Load payment status
       _selectedPaymentStatus = (data['is_paid'] ?? false) as bool 
           ? _paymentStatuses[0] 
           : _paymentStatuses[1];
       
-      // Load items
       final items = (data['items'] as List<dynamic>? ?? []);
       for (final item in items) {
         final itemMap = item as Map<String, dynamic>;
         final namaTanaman = (itemMap['nama_tanaman'] ?? '') as String;
         final jumlah = (itemMap['jumlah'] as int?) ?? 0;
         
-        if (namaTanaman.toLowerCase() == 'selada') {
+        if (namaTanaman.toLowerCase().contains('selada')) {
           isSeladaChecked = true;
           _seladaController.text = jumlah.toString();
-        } else if (namaTanaman.toLowerCase() == 'pakcoy') {
+        } else if (namaTanaman.toLowerCase().contains('pakcoy')) {
           isPakcoyChecked = true;
           _pakcoyController.text = jumlah.toString();
-        } else if (namaTanaman.toLowerCase() == 'kangkung') {
+        } else if (namaTanaman.toLowerCase().contains('kangkung')) {
           isKangkungChecked = true;
           _kangkungController.text = jumlah.toString();
         }
@@ -465,8 +551,6 @@ extension _AddEditTransactionScreenLogic on _AddEditTransactionScreenState {
       });
       _recalculateTotal();
     } catch (_) {
-      // kalau gagal load harga, biarkan total 0 (tetap aman karena backend
-      // TransactionService akan menghitung total dari Firestore).
     }
   }
 
@@ -477,15 +561,25 @@ extension _AddEditTransactionScreenLogic on _AddEditTransactionScreenState {
         int.tryParse(text.trim().isEmpty ? '0' : text.trim()) ?? 0;
 
     if (isSeladaChecked) {
-      final harga = _prices['Selada'] ?? 0.0;
+      // Cari harga dengan partial match agar lebih aman
+      double harga = 0.0;
+      _prices.forEach((key, value) {
+        if(key.toLowerCase().contains('selada')) harga = value;
+      });
       total += harga * parseQty(_seladaController.text);
     }
     if (isPakcoyChecked) {
-      final harga = _prices['Pakcoy'] ?? 0.0;
+      double harga = 0.0;
+      _prices.forEach((key, value) {
+        if(key.toLowerCase().contains('pakcoy')) harga = value;
+      });
       total += harga * parseQty(_pakcoyController.text);
     }
     if (isKangkungChecked) {
-      final harga = _prices['Kangkung'] ?? 0.0;
+      double harga = 0.0;
+      _prices.forEach((key, value) {
+        if(key.toLowerCase().contains('kangkung')) harga = value;
+      });
       total += harga * parseQty(_kangkungController.text);
     }
 
@@ -527,6 +621,49 @@ extension _AddEditTransactionScreenLogic on _AddEditTransactionScreenState {
         const SnackBar(content: Text('Silakan pilih tanggal transaksi')),
       );
     }
+
+    // --- 3.5 VALIDASI STOK (Bagian Baru) ---
+    String stockErrorMessage = '';
+    
+    if (isSeladaChecked) {
+      final qty = int.tryParse(_seladaController.text) ?? 0;
+      final available = _getStockByName('selada');
+      if (qty > available) {
+        stockErrorMessage += '\n- Stok Selada tidak cukup (Tersedia: $available).';
+      }
+    }
+    if (isPakcoyChecked) {
+      final qty = int.tryParse(_pakcoyController.text) ?? 0;
+      final available = _getStockByName('pakcoy');
+      if (qty > available) {
+        stockErrorMessage += '\n- Stok Pakcoy tidak cukup (Tersedia: $available).';
+      }
+    }
+    if (isKangkungChecked) {
+      final qty = int.tryParse(_kangkungController.text) ?? 0;
+      final available = _getStockByName('kangkung');
+      if (qty > available) {
+        stockErrorMessage += '\n- Stok Kangkung tidak cukup (Tersedia: $available).';
+      }
+    }
+
+    if (stockErrorMessage.isNotEmpty) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Stok Tidak Mencukupi'),
+          content: Text('Mohon kurangi jumlah pesanan:$stockErrorMessage'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return; // Stop proses submit
+    }
+    // --- AKHIR VALIDASI STOK ---
 
     // 4. Cek apakah semua validasi lolos
     if (!(isFormValid &&

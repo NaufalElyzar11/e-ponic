@@ -10,7 +10,6 @@ import 'package:hydroponics_app/models/user_model.dart';
 import 'package:hydroponics_app/theme/app_colors.dart';
 import 'package:hydroponics_app/widgets/logistic_delivery_detail_card.dart';
 import 'package:hydroponics_app/widgets/styled_dropdown_button_form_field.dart';
-import 'package:hydroponics_app/widgets/styled_date_picker_field.dart';
 import 'package:hydroponics_app/widgets/styled_elevated_button.dart';
 import 'package:hydroponics_app/services/shipping_service.dart';
 
@@ -97,12 +96,19 @@ class _LogisticAssignmentDetailScreenState extends State<LogisticAssignmentDetai
           );
         }).toList();
 
+        // --- PERBAIKAN DI SINI ---
         final dt = (data['tanggal'] as Timestamp?)?.toDate();
+        final createdAt = (data['created_at'] as Timestamp?)?.toDate(); // Ambil created_at
+
         final dateStr =
             dt != null ? DateFormat('dd MMM yyyy').format(dt) : '';
-        final timeStr =
-            dt != null ? DateFormat('HH:mm').format(dt) : '';
-
+        
+        // Gunakan createdAt untuk jam, jika ada.
+        final timeStr = createdAt != null 
+            ? DateFormat('HH:mm').format(createdAt) 
+            : (dt != null ? DateFormat('HH:mm').format(dt) : '');
+        // -------------------------
+        
         final tx = TransactionModel(
           id: transactionId,
           customerName: (data['nama_pelanggan'] ?? '') as String,

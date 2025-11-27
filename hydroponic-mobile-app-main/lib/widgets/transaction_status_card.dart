@@ -3,6 +3,7 @@ import 'package:hydroponics_app/models/transaction_model.dart';
 import 'package:hydroponics_app/theme/app_colors.dart';
 import 'package:hydroponics_app/widgets/styled_dropdown_button_form_field.dart';
 import 'package:hydroponics_app/widgets/styled_elevated_button.dart';
+import 'package:intl/intl.dart';
 
 class TransactionStatusCard extends StatefulWidget {
   final TransactionModel transaction;
@@ -80,7 +81,10 @@ class _TransactionStatusCardState extends State<TransactionStatusCard> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(plantQty.plant.plantName, style: TextStyle(color: Colors.white),),
-                      Text('${plantQty.quantity} pcs x ${plantQty.plant.price}', style: TextStyle(color: Colors.white),),
+                      Text(
+                        '${plantQty.quantity} pcs x ${NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', ).format(plantQty.plant.price)}', 
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ],
                   );
                 }).toList(),
@@ -91,7 +95,14 @@ class _TransactionStatusCardState extends State<TransactionStatusCard> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Total Harga:', style: TextStyle(color: Colors.white),),
-                Text('Rp ${widget.transaction.totalPrice.toStringAsFixed(0)}', style: TextStyle(color: Colors.white),)
+                Text(
+                  // 'Rp ${widget.transaction.totalPrice.toStringAsFixed(0)}', 
+                  NumberFormat.currency(
+                    locale: 'id_ID', 
+                    symbol: 'Rp ', ).format(widget.transaction.totalPrice
+                  ),
+                  style: TextStyle(color: Colors.white),
+                )
               ],
             ),
 

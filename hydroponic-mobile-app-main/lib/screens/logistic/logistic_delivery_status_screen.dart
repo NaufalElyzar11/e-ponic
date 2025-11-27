@@ -117,12 +117,19 @@ class _LogisticDeliveryStatusScreenState extends State<LogisticDeliveryStatusScr
       );
     }).toList();
 
+    // --- PERBAIKAN DI SINI ---
     final dt = (txData['tanggal'] as Timestamp?)?.toDate();
+    final createdAt = (txData['created_at'] as Timestamp?)?.toDate(); // Ambil created_at
+
     final dateStr =
         dt != null ? DateFormat('dd MMM yyyy').format(dt) : '';
-    final timeStr =
-        dt != null ? DateFormat('HH:mm').format(dt) : '';
-
+    
+    // Gunakan createdAt untuk jam
+    final timeStr = createdAt != null 
+        ? DateFormat('HH:mm').format(createdAt) 
+        : (dt != null ? DateFormat('HH:mm').format(dt) : '');
+    // -------------------------
+    
     final tx = TransactionModel(
       id: transaksiId,
       customerName: (txData['nama_pelanggan'] ?? '') as String,

@@ -99,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
 
-                      _buildForgotPasswordButton(),
+                      _gap(),
                       _gap(),
 
                       // Login Button
@@ -123,39 +123,39 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Specific Widget Builders
 
-  Widget _buildForgotPasswordButton() {
-    return Padding(
-      padding: const EdgeInsets.all(0.0),
-      child: Align(
-        alignment: Alignment.centerRight,
-        child: TextButton(
-          onPressed: () {
-            /// do something
-          },
-          style: ButtonStyle(
-            overlayColor: WidgetStateProperty.resolveWith(
-              (Set<WidgetState> states) {
-                if (states.contains(WidgetState.pressed)) {
-                  // ignore: deprecated_member_use
-                  return Color.fromARGB(255, 189, 189, 189).withOpacity(0.2);
-                }                
-                return null; 
-              },
-            ),
-          ),
-          child: const Text(
-            'Lupa Kata Sandi?',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              fontFamily: 'Roboto',
-              color: Color.fromARGB(255, 59, 59, 59),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _buildForgotPasswordButton() {
+  //   return Padding(
+  //     padding: const EdgeInsets.all(0.0),
+  //     child: Align(
+  //       alignment: Alignment.centerRight,
+  //       child: TextButton(
+  //         onPressed: () {
+  //           /// do something
+  //         },
+  //         style: ButtonStyle(
+  //           overlayColor: WidgetStateProperty.resolveWith(
+  //             (Set<WidgetState> states) {
+  //               if (states.contains(WidgetState.pressed)) {
+  //                 // ignore: deprecated_member_use
+  //                 return Color.fromARGB(255, 189, 189, 189).withOpacity(0.2);
+  //               }                
+  //               return null; 
+  //             },
+  //           ),
+  //         ),
+  //         child: const Text(
+  //           'Lupa Kata Sandi?',
+  //           style: TextStyle(
+  //             fontSize: 14,
+  //             fontWeight: FontWeight.w400,
+  //             fontFamily: 'Roboto',
+  //             color: Color.fromARGB(255, 59, 59, 59),
+  //           ),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _gap() => const SizedBox(height: 16);
 
