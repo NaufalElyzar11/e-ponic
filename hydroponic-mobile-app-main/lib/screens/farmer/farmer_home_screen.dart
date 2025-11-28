@@ -11,7 +11,7 @@ import 'package:hydroponics_app/widgets/maintenance_schedule_card.dart';
 import 'package:hydroponics_app/widgets/styled_elevated_button.dart';
 import 'package:hydroponics_app/services/auth_service.dart';
 import 'package:hydroponics_app/services/alarm_service.dart';
-// import 'package:hydroponics_app/services/notification_service.dart'; // Jika diperlukan
+import 'package:hydroponics_app/services/notification_service.dart';
 
 class FarmerHomeScreen extends StatefulWidget {
   const FarmerHomeScreen({super.key});
@@ -122,7 +122,6 @@ class _FarmerHomeContent extends StatelessWidget {
           return Center(child: Text('Error data tanam: ${snapshotTanam.error}'));
         }
 
-        // --- LOGIKA HITUNG TOTAL BIBIT (INPUT) ---
         int totalBibitDitanam = 0;
         bool isDateMissing = false;
         
@@ -131,7 +130,6 @@ class _FarmerHomeContent extends StatelessWidget {
         if (snapshotTanam.hasData && snapshotTanam.data!.docs.isNotEmpty) {
           var docs = snapshotTanam.data!.docs.toList();
 
-          // Sorting Client-side (Terlama ke Terbaru)
           docs.sort((a, b) {
             DateTime? getOb(dynamic data) {
               if (data == null) return null;
@@ -146,7 +144,6 @@ class _FarmerHomeContent extends StatelessWidget {
           
           sortedDocs = docs;
 
-          // Hitung akumulasi bibit masuk
           totalBibitDitanam = docs.fold<int>(
             0,
             (prev, doc) => prev + (doc.data()['jumlah_tanam'] as int? ?? 0),
@@ -234,7 +231,6 @@ class _FarmerHomeContent extends StatelessWidget {
                                 scrollDirection: Axis.horizontal, 
                                 child: Row(
                                   children: [
-                                    // KARTU 1: Total Stok Aktual
                                     SizedBox(
                                       width: MediaQuery.of(context).size.width * 0.75, 
                                       child: FarmerTotalPlantCard(
@@ -243,8 +239,6 @@ class _FarmerHomeContent extends StatelessWidget {
                                       ),
                                     ),
                                     const SizedBox(width: 15),
-                                    
-                                    // KARTU 2: Total Siap Panen
                                     SizedBox(
                                       width: MediaQuery.of(context).size.width * 0.75,
                                       child: FarmerTotalPlantCard(
@@ -311,7 +305,6 @@ class _FarmerHomeContent extends StatelessWidget {
                                 ),
                               )
                             else
-                              // STREAM 4: Jadwal Perawatan (Untuk status is_done)
                               StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                                 stream: FirebaseFirestore.instance
                                     .collection('jadwal_perawatan')
@@ -337,36 +330,22 @@ class _FarmerHomeContent extends StatelessWidget {
                                   final intervalCek = getInterval('jadwal_pengecekan_tanaman');
                                   final intervalBersih = getInterval('jadwal_pembersihan_instalasi');
 
-                                  // --- FUNGSI HITUNG TANGGAL JADWAL (MODULO) ---
                                   DateTime calculateNextDate(int interval, DateTime startDate) {
                                     final now = DateTime.now();
                                     final today = DateTime(now.year, now.month, now.day);
                                     final start = DateTime(startDate.year, startDate.month, startDate.day);
 
                                     if (interval <= 0) return today.add(const Duration(days: 1));
-                                    
                                     int diff = today.difference(start).inDays;
-                                    
-                                    // Jika tanggal tanam di masa depan (baru input)
                                     if (diff < 0) return start.add(Duration(days: interval));
-
                                     int remainder = diff % interval;
-                                    DateTime candidate;
                                     
-                                    if (remainder == 0) {
-                                      // Hari ini adalah hari jadwalnya!
-                                      candidate = today;
-                                    } else {
-                                      // Jadwal berikutnya
-                                      int daysToNext = interval - remainder;
-                                      candidate = today.add(Duration(days: daysToNext));
-                                    }
-                                    return candidate;
+                                    if (remainder == 0) return today;
+                                    else return today.add(Duration(days: interval - remainder));
                                   }
 
                                   final List<PlantMaintenanceModel> schedules = [];
                                   
-                                  // Variabel penanda apakah tanggal cocok hari ini
                                   bool isToday(DateTime date) {
                                     final now = DateTime.now();
                                     return date.year == now.year &&
@@ -386,11 +365,13 @@ class _FarmerHomeContent extends StatelessWidget {
                                     final key = '${field}_${DateFormat('yyyy-MM-dd').format(date.toLocal())}_$specificTanamId';
                                     final isDone = statusMap[key] ?? false;
 
-                                    // Cek duplikasi agar tampilan list rapi
+                                    // --- PERBAIKAN: Jika sudah selesai, JANGAN tambahkan ke list ---
+                                    if (isDone) return; 
+                                    // -----------------------------------------------------------------
+
                                     bool isDuplicate = schedules.any((s) => s.maintenanceName == title && s.description == description);
                                     if(isDuplicate) return; 
 
-                                    // Masukkan ke list untuk ditampilkan di UI
                                     schedules.add(
                                       PlantMaintenanceModel(
                                         maintenanceName: title,
@@ -416,9 +397,18 @@ class _FarmerHomeContent extends StatelessWidget {
                                         },
                                       ),
                                     );
+
+                                    final uniqueNotifId = (title + date.toIso8601String() + specificTanamId).hashCode;
+                                    final scheduledTime = DateTime(date.year, date.month, date.day, 9, 0);
+
+                                    NotificationService.instance.scheduleLocalNotification(
+                                      id: uniqueNotifId,
+                                      title: title,
+                                      body: description,
+                                      scheduledDate: scheduledTime,
+                                    );
                                   }
 
-                                  // --- LOOPING UNTUK SETIAP BATCH TANAM ---
                                   for (var doc in sortedDocs) {
                                     final thisDocId = doc.id;
                                     final tglTanamRaw = doc.data()['tanggal_tanam'];
@@ -434,7 +424,6 @@ class _FarmerHomeContent extends StatelessWidget {
 
                                     if (tglTanam == null) continue;
 
-                                    // 1. Hitung Jadwal Perawatan Rutin untuk Batch ini
                                     DateTime dateAir = calculateNextDate(intervalAir, tglTanam);
                                     DateTime dateCek = calculateNextDate(intervalCek, tglTanam);
                                     DateTime dateBersih = calculateNextDate(intervalBersih, tglTanam);
@@ -463,7 +452,6 @@ class _FarmerHomeContent extends StatelessWidget {
                                       specificTanamId: thisDocId,
                                     );
 
-                                    // 2. Hitung Estimasi Panen untuk Batch ini
                                     final panenDate = tglTanam.add(Duration(days: masaTanam));
                                     if (isToday(panenDate)) {
                                       addSchedule(
@@ -475,25 +463,17 @@ class _FarmerHomeContent extends StatelessWidget {
                                       );
                                     }
                                   }
-                                  // ---------------------------------------------------
 
-                                  // --- LOGIKA AGREGASI ALARM ---
-                                  // Jika ada jadwal hari ini, kita kumpulkan semua judulnya
-                                  // lalu buat 1 alarm saja.
                                   if (schedules.isNotEmpty) {
-                                    // Menggunakan Set agar nama tugas yang sama tidak muncul berkali-kali
-                                    // (Misal ada 2 batch butuh "Cek Air", cukup tampil sekali di notif)
                                     final uniqueTitles = schedules
                                         .map((s) => s.maintenanceName)
                                         .toSet()
                                         .toList();
                                     
-                                    // Gabungkan dengan Bullet Points
                                     final summaryBody = uniqueTitles
                                         .map((title) => "• $title")
                                         .join("\n");
 
-                                    // Panggil helper untuk set alarm
                                     _scheduleDailyAlarmSummary(summaryBody);
                                   }
 
@@ -544,15 +524,11 @@ class _FarmerHomeContent extends StatelessWidget {
     );
   }
 
-  // Fungsi Helper untuk memanggil AlarmService dengan konten gabungan
   void _scheduleDailyAlarmSummary(String summaryBody) {
-    // Kita gunakan Future.microtask atau memanggilnya langsung secara async
-    // agar tidak memblokir proses build UI.
     AlarmService.instance.scheduleDailySummaryAlarm(
       body: summaryBody,
-      isTestMode: false, // Ubah ke true jika ingin langsung tes bunyi sekarang
+      isTestMode: false, 
     ).then((_) {
-      // Alarm berhasil dijadwalkan
     }).catchError((e) {
       debugPrint("Gagal set alarm: $e");
     });
