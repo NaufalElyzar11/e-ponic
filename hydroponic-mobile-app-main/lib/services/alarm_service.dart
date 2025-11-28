@@ -23,112 +23,84 @@ class AlarmService {
     debugPrint('AlarmService initialization complete');
   }
 
-  /// Schedule alarm untuk jadwal petani
-  /// 
-  /// [scheduleId] - ID unik untuk alarm
-  /// [title] - Judul notifikasi
-  /// [body] - Isi notifikasi
-  /// [scheduledDate] - Tanggal dan waktu alarm (akan di-set ke jam 09:00)
-  /// [isTestMode] - Jika true, alarm akan di-set 1 menit dari sekarang (untuk testing)
-  Future<void> scheduleMaintenanceAlarm({
-    required int scheduleId,
+  /// Schedule alarm tunggal (Helper function)
+  Future<void> _setAlarm({
+    required int id,
     required String title,
     required String body,
-    required DateTime scheduledDate,
-    bool isTestMode = false,
+    required DateTime dateTime,
   }) async {
-    if (!_initialized) await initialize();
-
-    // Pastikan alarm lama dengan ID sama dihapus
-    await Alarm.stop(scheduleId);
-
-    DateTime alarmTime;
-    
-    if (isTestMode) {
-      // Untuk testing: set alarm 1 menit dari sekarang
-      alarmTime = DateTime.now().add(const Duration(minutes: 1));
-    } else {
-      // Set alarm ke jam 09:00 pada tanggal yang ditentukan
-      alarmTime = DateTime(
-        scheduledDate.year,
-        scheduledDate.month,
-        scheduledDate.day,
-        9, // Jam 09:00
-        0, // Menit 0
-      );
-
-      // Jika waktu alarm sudah lewat hari ini, skip atau schedule untuk besok?
-      // Requirement: Jadwal perawatan hari ini. Jika sudah lewat jam 9, mungkin tetap schedule 1 menit lagi?
-      // Atau skip saja.
-      if (alarmTime.isBefore(DateTime.now())) {
-        debugPrint('Alarm time has passed, skipping: $title');
-        return;
-      }
-    }
-
-    // Konfigurasi Alarm
     final alarmSettings = AlarmSettings(
-      id: scheduleId,
-      dateTime: alarmTime,
+      id: id,
+      dateTime: dateTime,
       assetAudioPath: 'assets/audio/alarm.mp3', // Pastikan file ini ada
-      loopAudio: true, // Berdering terus sampai dimatikan
+      loopAudio: true,
       vibrate: true,
       fadeDuration: 3.0,
       notificationSettings: NotificationSettings(
         title: title,
         body: body,
-        stopButton: 'Stop', // Tombol stop di notifikasi
+        stopButton: 'Saya Mengerti',
       ),
-      warningNotificationOnKill: true, // Notifikasi tetap muncul jika app dimatikan
-      androidFullScreenIntent: true, // Tampil fullscreen di Android
+      warningNotificationOnKill: true,
+      androidFullScreenIntent: true,
     );
 
     try {
       await Alarm.set(alarmSettings: alarmSettings);
-      debugPrint('✅ Alarm scheduled successfully: $title at ${alarmTime.toString()}');
+      debugPrint('✅ Alarm set: $title at $dateTime');
     } catch (e) {
       debugPrint('❌ Error scheduling alarm: $e');
-      // Jika gagal (misal asset audio tidak ketemu), coba fallback atau log error
     }
   }
 
-  /// Schedule multiple alarms untuk semua jadwal hari ini
+  /// Schedule SATU alarm harian yang berisi rangkuman semua jadwal
   /// 
-  /// [spreadTime] - Jika true, alarm akan di-spread dengan interval 1 menit
-  /// untuk menghindari semua alarm berbunyi bersamaan
-  Future<void> scheduleTodayAlarms({
-    required List<Map<String, dynamic>> schedules,
+  /// [body] - String gabungan semua tugas (misal: "1. Cek Air\n2. Cek Tanaman")
+  /// [isTestMode] - Jika true, alarm akan bunyi 10 detik dari sekarang
+  Future<void> scheduleDailySummaryAlarm({
+    required String body,
     bool isTestMode = false,
-    bool spreadTime = false, // Default false: semua alarm jam 9:00
   }) async {
     if (!_initialized) await initialize();
 
-    // Hentikan semua alarm yang ada agar tidak duplikat
-    // (Opsional, tergantung logika yang diinginkan. Alarm.stopAll() akan menghapus semua)
-    // await Alarm.stopAll(); 
+    // ID Tetap (misal 1) agar setiap hari alarmnya di-update/overwrite, 
+    // sehingga tidak menumpuk banyak alarm.
+    const int dailyAlarmId = 1;
 
-    int offsetMinutes = 0; // Untuk spread time
-    
-    for (final schedule in schedules) {
-      final scheduleId = schedule['id'] as int; // Pastikan ID unique integer
-      final title = schedule['title'] as String;
-      final body = schedule['body'] as String;
-      DateTime date = schedule['date'] as DateTime;
-      
-      // Jika spreadTime aktif, tambahkan offset menit
-      if (spreadTime && !isTestMode) {
-        date = date.add(Duration(minutes: offsetMinutes));
-        offsetMinutes++; // Setiap alarm berikutnya +1 menit
-      }
+    // Stop alarm sebelumnya (jika ada) untuk update konten baru
+    await Alarm.stop(dailyAlarmId);
 
-      await scheduleMaintenanceAlarm(
-        scheduleId: scheduleId,
-        title: title,
-        body: body,
-        scheduledDate: date,
-        isTestMode: isTestMode,
+    DateTime alarmTime;
+
+    if (isTestMode) {
+      // Test: Bunyi dalam 10 detik
+      alarmTime = DateTime.now().add(const Duration(seconds: 10));
+    } else {
+      final now = DateTime.now();
+      // Set ke Jam 09:00:00 hari ini
+      alarmTime = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        9, // Jam
+        0, // Menit
       );
+
+      // Jika jam 09:00 sudah lewat hari ini, kita tidak perlu membunyikan alarm lagi
+      // (Atau bisa diubah logicnya untuk set besok, tapi requirementnya adalah jadwal "Hari Ini")
+      if (alarmTime.isBefore(now)) {
+        debugPrint('⏰ Waktu alarm harian (09:00) sudah lewat untuk hari ini.');
+        return;
+      }
     }
+
+    await _setAlarm(
+      id: dailyAlarmId,
+      title: 'Jadwal Perawatan Hari Ini',
+      body: body,
+      dateTime: alarmTime,
+    );
   }
 
   /// Cancel alarm berdasarkan ID
@@ -139,19 +111,5 @@ class AlarmService {
   /// Cancel semua alarm
   Future<void> cancelAllAlarms() async {
     await Alarm.stopAll();
-  }
-
-  /// Test alarm - schedule alarm 1 menit dari sekarang
-  Future<void> testAlarm({
-    required String title,
-    required String body,
-  }) async {
-    await scheduleMaintenanceAlarm(
-      scheduleId: 9999,
-      title: title,
-      body: body,
-      scheduledDate: DateTime.now(), // Date diabaikan jika isTestMode=true
-      isTestMode: true,
-    );
   }
 }

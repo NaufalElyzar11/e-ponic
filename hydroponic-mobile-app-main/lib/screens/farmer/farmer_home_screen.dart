@@ -11,7 +11,7 @@ import 'package:hydroponics_app/widgets/maintenance_schedule_card.dart';
 import 'package:hydroponics_app/widgets/styled_elevated_button.dart';
 import 'package:hydroponics_app/services/auth_service.dart';
 import 'package:hydroponics_app/services/alarm_service.dart';
-import 'package:hydroponics_app/services/notification_service.dart';
+// import 'package:hydroponics_app/services/notification_service.dart'; // Jika diperlukan
 
 class FarmerHomeScreen extends StatefulWidget {
   const FarmerHomeScreen({super.key});
@@ -365,8 +365,8 @@ class _FarmerHomeContent extends StatelessWidget {
                                   }
 
                                   final List<PlantMaintenanceModel> schedules = [];
-                                  final List<Map<String, dynamic>> alarmData = [];
-                              
+                                  
+                                  // Variabel penanda apakah tanggal cocok hari ini
                                   bool isToday(DateTime date) {
                                     final now = DateTime.now();
                                     return date.year == now.year &&
@@ -386,17 +386,11 @@ class _FarmerHomeContent extends StatelessWidget {
                                     final key = '${field}_${DateFormat('yyyy-MM-dd').format(date.toLocal())}_$specificTanamId';
                                     final isDone = statusMap[key] ?? false;
 
-                                    // Cek duplikasi agar tampilan rapi (opsional)
+                                    // Cek duplikasi agar tampilan list rapi
                                     bool isDuplicate = schedules.any((s) => s.maintenanceName == title && s.description == description);
                                     if(isDuplicate) return; 
 
-                                    alarmData.add({
-                                      'id': schedules.length + 1,
-                                      'title': title,
-                                      'body': description,
-                                      'date': date,
-                                    });
-
+                                    // Masukkan ke list untuk ditampilkan di UI
                                     schedules.add(
                                       PlantMaintenanceModel(
                                         maintenanceName: title,
@@ -424,7 +418,7 @@ class _FarmerHomeContent extends StatelessWidget {
                                     );
                                   }
 
-                                  // --- REVISI: LOOPING UNTUK SETIAP BATCH TANAM ---
+                                  // --- LOOPING UNTUK SETIAP BATCH TANAM ---
                                   for (var doc in sortedDocs) {
                                     final thisDocId = doc.id;
                                     final tglTanamRaw = doc.data()['tanggal_tanam'];
@@ -483,8 +477,24 @@ class _FarmerHomeContent extends StatelessWidget {
                                   }
                                   // ---------------------------------------------------
 
-                                  if (alarmData.isNotEmpty) {
-                                    _scheduleAlarmsAsync(alarmData);
+                                  // --- LOGIKA AGREGASI ALARM ---
+                                  // Jika ada jadwal hari ini, kita kumpulkan semua judulnya
+                                  // lalu buat 1 alarm saja.
+                                  if (schedules.isNotEmpty) {
+                                    // Menggunakan Set agar nama tugas yang sama tidak muncul berkali-kali
+                                    // (Misal ada 2 batch butuh "Cek Air", cukup tampil sekali di notif)
+                                    final uniqueTitles = schedules
+                                        .map((s) => s.maintenanceName)
+                                        .toSet()
+                                        .toList();
+                                    
+                                    // Gabungkan dengan Bullet Points
+                                    final summaryBody = uniqueTitles
+                                        .map((title) => "• $title")
+                                        .join("\n");
+
+                                    // Panggil helper untuk set alarm
+                                    _scheduleDailyAlarmSummary(summaryBody);
                                   }
 
                                   if (schedules.isEmpty) {
@@ -506,23 +516,6 @@ class _FarmerHomeContent extends StatelessWidget {
 
                                   return Column(
                                     children: [
-                                      // Tombol Test Alarm & Notifikasi (Opsional, untuk debug)
-                                      /*
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: StyledElevatedButton(
-                                          text: 'Test Alarm (1 menit)',
-                                          onPressed: () async {
-                                             // ... Logic Test Alarm ...
-                                          },
-                                          foregroundColor: Colors.white,
-                                          backgroundColor: Colors.orange,
-                                          icon: Icons.alarm,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      */
-                                      
                                       ListView.builder(
                                         shrinkWrap: true,
                                         physics: const NeverScrollableScrollPhysics(),
@@ -551,15 +544,17 @@ class _FarmerHomeContent extends StatelessWidget {
     );
   }
 
-  void _scheduleAlarmsAsync(List<Map<String, dynamic>> alarmData) {
-    debugPrint('📅 Scheduling ${alarmData.length} alarms for today...');
-    AlarmService.instance.scheduleTodayAlarms(
-      schedules: alarmData,
-      isTestMode: false,
+  // Fungsi Helper untuk memanggil AlarmService dengan konten gabungan
+  void _scheduleDailyAlarmSummary(String summaryBody) {
+    // Kita gunakan Future.microtask atau memanggilnya langsung secara async
+    // agar tidak memblokir proses build UI.
+    AlarmService.instance.scheduleDailySummaryAlarm(
+      body: summaryBody,
+      isTestMode: false, // Ubah ke true jika ingin langsung tes bunyi sekarang
     ).then((_) {
-      debugPrint('✅ All alarms scheduled successfully');
+      // Alarm berhasil dijadwalkan
     }).catchError((e) {
-      debugPrint('❌ Error scheduling alarms: $e');
+      debugPrint("Gagal set alarm: $e");
     });
   }
 }
