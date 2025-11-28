@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hydroponics_app/models/delivery_assigntment_model.dart';
 import 'package:hydroponics_app/theme/app_colors.dart';
@@ -148,16 +149,35 @@ class DeliveryDetailCard extends StatelessWidget {
                   ElevatedButton(
                     onPressed: () async {
                       final controller = TextEditingController();
+                      final formKey = GlobalKey<FormState>();
                       await showDialog(
                         context: context,
                         builder: (ctx) => AlertDialog(
                           title: const Text('Tandai Selesai'),
-                          content: TextField(
-                            controller: controller,
-                            decoration: const InputDecoration(
-                              hintText: 'Catatan (opsional)',
+                          content: Form(
+                            key: formKey,
+                            child: TextFormField(
+                              controller: controller,
+                              decoration: const InputDecoration(
+                                hintText: 'Catatan (opsional, maksimal 30 kata)',
+                              ),
+                              maxLines: 3,
+                              inputFormatters: [
+                                // Hanya simbol penting: huruf, angka, spasi, titik, koma, dash, slash, @
+                                FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Z0-9\s.,\-/@]")),
+                              ],
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return null; // Opsional, jadi boleh kosong
+                                }
+                                // Validasi: maksimal 30 kata
+                                final words = value.trim().split(RegExp(r'\s+')).where((word) => word.isNotEmpty).toList();
+                                if (words.length > 30) {
+                                  return 'Catatan maksimal 30 kata (saat ini: ${words.length} kata)';
+                                }
+                                return null;
+                              },
                             ),
-                            maxLines: 3,
                           ),
                           actions: [
                             TextButton(
@@ -166,14 +186,16 @@ class DeliveryDetailCard extends StatelessWidget {
                             ),
                             TextButton(
                               onPressed: () async {
-                                await ShippingService.instance
-                                    .updateDeliveryStatus(
-                                  shippingId: shippingId,
-                                  statusPengiriman: 'Selesai',
-                                  catatan: controller.text.trim(),
-                                );
-                                // ignore: use_build_context_synchronously
-                                Navigator.pop(ctx);
+                                if (formKey.currentState?.validate() ?? true) {
+                                  await ShippingService.instance
+                                      .updateDeliveryStatus(
+                                    shippingId: shippingId,
+                                    statusPengiriman: 'Selesai',
+                                    catatan: controller.text.trim(),
+                                  );
+                                  // ignore: use_build_context_synchronously
+                                  Navigator.pop(ctx);
+                                }
                               },
                               child: const Text('Simpan'),
                             ),
