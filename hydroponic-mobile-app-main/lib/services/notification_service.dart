@@ -128,8 +128,10 @@ class NotificationService {
         final timestamp = data['timestamp'] as DateTime;
         final title = data['title'] ?? 'Info';
         
-        // Cek ID unik (termasuk suffix _assigned / _done) agar tidak spam notif yang sama
-        // Logic sederhana: cek timestamp
+        if (data['type'] == 'maintenance' || data['type'] == 'harvest_estimate') {
+          continue; 
+        }
+
         if (timestamp.isAfter(_lastCheckTime)) {
           _showLocalNotification(
             id: data['id'].hashCode,
@@ -180,7 +182,7 @@ class NotificationService {
     });
   }
 
-  // --- 5. LOGIKA PER ROLE (MODIFIED FOR HISTORY SPLIT) ---
+  // --- 5. LOGIKA PER ROLE ---
 
   Map<String, dynamic> _formatNotification({
     required String id,
@@ -203,40 +205,27 @@ class NotificationService {
     };
   }
 
-  /// KURIR: Memecah 1 dokumen menjadi 2 histori (Tugas Baru & Selesai)
   Stream<List<Map<String, dynamic>>> _getCourierNotificationsStream(String courierId) {
-    return _db
-        .collection('pengiriman')
-        .where('id_kurir', isEqualTo: courierId)
-        .orderBy('created_at', descending: true) // Gunakan created_at sebagai base sort
-        .limit(10)
-        .snapshots()
+    return _db.collection('pengiriman').where('id_kurir', isEqualTo: courierId).orderBy('created_at', descending: true).limit(10).snapshots()
         .asyncMap((snapshot) async {
           final notifications = <Map<String, dynamic>>[];
-
           for (final doc in snapshot.docs) {
             final data = doc.data();
-            
             final createdAt = (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
             final updatedAt = (data['updated_at'] as Timestamp?)?.toDate();
-            
             final status = (data['status_pengiriman'] ?? 'Belum Dikirim') as String;
             final transaksiId = (data['id_transaksi'] ?? '') as String;
             
-            // Fetch nama pelanggan
             String namaPelanggan = 'Pelanggan';
             if (transaksiId.isNotEmpty) {
                try {
                  final txDoc = await _db.collection('transaksi').doc(transaksiId).get();
-                 if (txDoc.exists) {
-                   namaPelanggan = (txDoc.data()?['nama_pelanggan'] ?? 'Pelanggan') as String;
-                 }
+                 if (txDoc.exists) namaPelanggan = (txDoc.data()?['nama_pelanggan'] ?? 'Pelanggan') as String;
                } catch (_) {}
             }
 
-            // ITEM 1: Histori Penugasan (Selalu muncul)
             notifications.add(_formatNotification(
-              id: '${doc.id}_assigned', // ID Unik agar tidak bentrok
+              id: '${doc.id}_assigned',
               title: 'Pengiriman Baru',
               body: 'Tugas baru: Antar ke $namaPelanggan',
               timestamp: createdAt,
@@ -244,12 +233,10 @@ class NotificationService {
               referenceId: doc.id,
             ));
 
-            // ITEM 2: Histori Selesai (Muncul HANYA jika status selesai)
-            // Ini menciptakan riwayat terpisah di list
             if (status.toLowerCase().contains('selesai') || status.toLowerCase().contains('terkirim')) {
                if (updatedAt != null) {
                  notifications.add(_formatNotification(
-                    id: '${doc.id}_done', // ID Unik berbeda
+                    id: '${doc.id}_done',
                     title: 'Pengiriman Selesai',
                     body: 'Sukses mengantar ke $namaPelanggan',
                     timestamp: updatedAt,
@@ -259,63 +246,36 @@ class NotificationService {
                }
             }
           }
-          // Sort ulang agar yang "Selesai" (terbaru) ada di paling atas
           notifications.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
           return notifications;
         });
   }
 
-  /// LOGISTIK: Sudah menggabungkan 2 stream (Otomatis terpisah)
   Stream<List<Map<String, dynamic>>> _getLogisticNotificationsStream() {
-    // 1. Transaksi Siap (Source: Transaksi)
-    final s1 = _db.collection('transaksi')
-        .where('is_harvest', isEqualTo: true)
-        .where('is_assigned', isEqualTo: false)
-        .snapshots()
+    final s1 = _db.collection('transaksi').where('is_harvest', isEqualTo: true).where('is_assigned', isEqualTo: false).snapshots()
         .map((s) => s.docs.map((d) {
             final date = (d['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
             return _formatNotification(
-              id: '${d.id}_ready',
-              title: 'Siap Dikirim',
-              body: 'Pesanan ${d['nama_pelanggan']}',
-              timestamp: date,
-              type: 'shipping',
-              referenceId: d.id
+              id: '${d.id}_ready', title: 'Siap Dikirim', body: 'Pesanan ${d['nama_pelanggan']}', timestamp: date, type: 'shipping', referenceId: d.id
             );
         }).toList());
 
-    // 2. Pengiriman Selesai (Source: Pengiriman)
-    final s2 = _db.collection('pengiriman')
-        .orderBy('updated_at', descending: true)
-        .limit(10)
-        .snapshots()
-        .map((s) => s.docs
-            .where((d) => (d['status_pengiriman']??'').toString().toLowerCase().contains('selesai'))
+    final s2 = _db.collection('pengiriman').orderBy('updated_at', descending: true).limit(10).snapshots()
+        .map((s) => s.docs.where((d) => (d['status_pengiriman']??'').toString().toLowerCase().contains('selesai'))
             .map((d) {
               final date = (d['updated_at'] as Timestamp?)?.toDate() ?? DateTime.now();
               return _formatNotification(
-                id: '${d.id}_done',
-                title: 'Pengiriman Selesai',
-                body: 'Kurir menyelesaikan pengiriman',
-                timestamp: date,
-                type: 'delivery_status',
-                referenceId: d.id
+                id: '${d.id}_done', title: 'Pengiriman Selesai', body: 'Kurir menyelesaikan pengiriman', timestamp: date, type: 'delivery_status', referenceId: d.id
               );
             }).toList());
 
     return _combineLists([s1, s2]);
   }
 
-  /// PETANI: Menambahkan riwayat Panen Selesai (sebelumnya hilang)
   Stream<List<Map<String, dynamic>>> _getFarmerNotificationsStream(String userId, String? plantId) {
     if (plantId == null) return Stream.value([]);
     
-    // Kita ambil SEMUA transaksi (baik yang belum maupun sudah panen) untuk membuat histori lengkap
-    // Limit 20 agar tidak terlalu berat
-    return _db.collection('transaksi')
-        .orderBy('created_at', descending: true)
-        .limit(20)
-        .snapshots()
+    return _db.collection('transaksi').orderBy('created_at', descending: true).limit(20).snapshots()
         .asyncMap((snapshot) async {
           final notifications = <Map<String, dynamic>>[];
 
@@ -323,50 +283,117 @@ class NotificationService {
             final data = doc.data();
             final items = (data['items'] as List?) ?? [];
             
-            // Cek apakah ada tanaman petani ini
             if (items.any((i) => i['id_tanaman'].toString() == plantId)) {
               final isHarvested = data['is_harvest'] == true;
               final date = (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
               final namaPelanggan = data['nama_pelanggan'] ?? 'Pelanggan';
 
-              if (!isHarvested) {
-                // Item 1: Tugas Masuk
+              notifications.add(_formatNotification(
+                id: '${doc.id}_todo', title: 'Tugas Panen', body: 'Pesanan baru: $namaPelanggan', timestamp: date, type: 'harvest', referenceId: doc.id
+              ));
+
+              if (isHarvested) {
+                // Gunakan updated_at untuk histori panen selesai, atau fallback ke created_at
+                final dateDone = (data['updated_at'] as Timestamp?)?.toDate() ?? date;
                 notifications.add(_formatNotification(
-                  id: '${doc.id}_todo',
-                  title: 'Tugas Panen',
-                  body: 'Pesanan baru: $namaPelanggan',
-                  timestamp: date,
-                  type: 'harvest',
-                  referenceId: doc.id
-                ));
-              } else {
-                // Item 2: Riwayat Sudah Dipanen (Agar tidak hilang dari list)
-                // Kita gunakan tanggal transaksi sebagai referensi (atau updated_at jika ada)
-                notifications.add(_formatNotification(
-                  id: '${doc.id}_done',
-                  title: 'Panen Selesai',
-                  body: 'Pesanan $namaPelanggan telah dipanen',
-                  timestamp: date, // Idealnya updated_at, tapi fallback ke created_at
-                  type: 'harvest_done',
-                  referenceId: doc.id
+                  id: '${doc.id}_done', title: 'Panen Selesai', body: 'Pesanan $namaPelanggan telah dipanen', timestamp: dateDone, type: 'harvest_done', referenceId: doc.id
                 ));
               }
             }
           }
           
-          // Tambahkan Jadwal Perawatan (Opsional)
           try {
-            final maintenance = await _getFarmerMaintenance(plantId);
+            final maintenance = await _getFarmerMaintenance(userId, plantId);
             notifications.addAll(maintenance);
           } catch (_) {}
 
-          // Sort Terlama -> Terbaru
           notifications.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
           return notifications;
         });
   }
 
-  // Helper Combine List
+  // --- LOGIKA HITUNG JADWAL (DENGAN FILTER WAKTU JAM 9) ---
+  Future<List<Map<String, dynamic>>> _getFarmerMaintenance(String userId, String plantId) async {
+    final notifications = <Map<String, dynamic>>[];
+    
+    // --- PENGECEKAN WAKTU ---
+    final now = DateTime.now();
+    final todayNineAM = DateTime(now.year, now.month, now.day, 9, 0);
+
+    // Jika sekarang BELUM jam 09:00 pagi, jangan tampilkan riwayat perawatan
+    if (now.isBefore(todayNineAM)) {
+      return [];
+    }
+    // ------------------------
+
+    try {
+      final plantDoc = await _db.collection('tanaman').doc(plantId).get();
+      if (!plantDoc.exists) return [];
+      final plantData = plantDoc.data() ?? {};
+      int getInt(String k) {
+        final val = plantData[k];
+        if (val is int) return val;
+        if (val is String) return int.tryParse(val) ?? 1;
+        return 1;
+      }
+      final intAir = getInt('jadwal_pengecekan_air_dan_nutrisi');
+      final intCek = getInt('jadwal_pengecekan_tanaman');
+      final intBersih = getInt('jadwal_pembersihan_instalasi');
+      final masaTanam = getInt('masa_tanam');
+
+      final dataTanamSnap = await _db.collection('data_tanam')
+          .where('id_tanaman', isEqualTo: plantId)
+          .where('id_petani', isEqualTo: userId)
+          .get();
+
+      final today = DateTime(now.year, now.month, now.day);
+      // Gunakan todayNineAM sebagai timestamp agar konsisten jam 9
+      final notificationTime = todayNineAM;
+
+      final Set<String> tasks = {};
+
+      for (var doc in dataTanamSnap.docs) {
+        final d = doc.data();
+        DateTime? tgl;
+        if(d['tanggal_tanam'] is Timestamp) tgl = (d['tanggal_tanam'] as Timestamp).toDate();
+        else if(d['tanggal_tanam'] is String) tgl = DateTime.tryParse(d['tanggal_tanam']);
+        
+        if (tgl == null) continue;
+        final start = DateTime(tgl.year, tgl.month, tgl.day);
+        final diff = today.difference(start).inDays;
+        
+        if (diff <= 0) continue; 
+
+        bool isTodaySchedule(int interval) => interval > 0 && (diff % interval == 0);
+
+        if (isTodaySchedule(intAir)) tasks.add('Pengecekan Air & Nutrisi');
+        if (isTodaySchedule(intCek)) tasks.add('Pengecekan Tanaman');
+        if (isTodaySchedule(intBersih)) tasks.add('Pembersihan Instalasi');
+        
+        final panenDate = start.add(Duration(days: masaTanam));
+        if (panenDate.year == today.year && panenDate.month == today.month && panenDate.day == today.day) {
+           notifications.add(_formatNotification(
+            id: 'panen_${doc.id}', title: 'Estimasi Panen', body: 'Waktunya panen untuk batch ini!', timestamp: notificationTime, type: 'harvest_estimate'
+          ));
+        }
+      }
+
+      if (tasks.isNotEmpty) {
+        final combinedBody = tasks.map((t) => "• $t").join("\n");
+        
+        notifications.add(_formatNotification(
+          id: 'maintenance_today_combined',
+          title: 'Jadwal Perawatan',
+          body: combinedBody,
+          timestamp: notificationTime,
+          type: 'maintenance'
+        ));
+      }
+
+    } catch (_) {}
+    return notifications;
+  }
+
   Stream<List<T>> _combineLists<T>(List<Stream<List<T>>> streams) {
     StreamController<List<T>> controller = StreamController<List<T>>();
     List<List<T>> latestValues = List.filled(streams.length, []);
@@ -392,7 +419,6 @@ class NotificationService {
     return controller.stream;
   }
 
-  Future<List<Map<String, dynamic>>> _getFarmerMaintenance(String plantId) async => [];
   Future<List<Map<String, dynamic>>> _getAdminNotifications() async => [];
   Future<List<Map<String, dynamic>>> _getSuperAdminNotifications() async => [];
   Future<void> markAsRead(String notificationId) async {}

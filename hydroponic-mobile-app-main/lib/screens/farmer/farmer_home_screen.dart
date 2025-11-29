@@ -231,6 +231,7 @@ class _FarmerHomeContent extends StatelessWidget {
                                 scrollDirection: Axis.horizontal, 
                                 child: Row(
                                   children: [
+                                    // KARTU 1: Total Stok Aktual
                                     SizedBox(
                                       width: MediaQuery.of(context).size.width * 0.75, 
                                       child: FarmerTotalPlantCard(
@@ -239,6 +240,8 @@ class _FarmerHomeContent extends StatelessWidget {
                                       ),
                                     ),
                                     const SizedBox(width: 15),
+                                    
+                                    // KARTU 2: Total Siap Panen
                                     SizedBox(
                                       width: MediaQuery.of(context).size.width * 0.75,
                                       child: FarmerTotalPlantCard(
@@ -315,43 +318,19 @@ class _FarmerHomeContent extends StatelessWidget {
                                   final statusDocs = statusSnap.data?.docs ?? [];
                                   final Map<String, bool> statusMap = {};
                                   for (final doc in statusDocs) {
-                                    final d = doc.data();
-                                    final field = (d['field'] ?? '') as String;
-                                    final recordedTanamId = (d['id_data_tanam'] ?? '') as String; 
-                                    final ts = d['tanggal'] as Timestamp?;
-                                    final date = ts?.toDate();
-                                    if (field.isEmpty || date == null) continue;
-                                    
-                                    final key = '${field}_${DateFormat('yyyy-MM-dd').format(date.toLocal())}_$recordedTanamId';
-                                    statusMap[key] = (d['is_done'] ?? false) as bool;
+                                    statusMap[doc.id] = (doc.data()['is_done'] ?? false) as bool;
                                   }
 
                                   final intervalAir = getInterval('jadwal_pengecekan_air_dan_nutrisi');
                                   final intervalCek = getInterval('jadwal_pengecekan_tanaman');
                                   final intervalBersih = getInterval('jadwal_pembersihan_instalasi');
 
-                                  DateTime calculateNextDate(int interval, DateTime startDate) {
-                                    final now = DateTime.now();
-                                    final today = DateTime(now.year, now.month, now.day);
-                                    final start = DateTime(startDate.year, startDate.month, startDate.day);
-
-                                    if (interval <= 0) return today.add(const Duration(days: 1));
-                                    int diff = today.difference(start).inDays;
-                                    if (diff < 0) return start.add(Duration(days: interval));
-                                    int remainder = diff % interval;
-                                    
-                                    if (remainder == 0) return today;
-                                    else return today.add(Duration(days: interval - remainder));
-                                  }
-
-                                  final List<PlantMaintenanceModel> schedules = [];
+                                  // --- REVISI: Gunakan Map agar ID unik (tidak double) ---
+                                  final Map<String, PlantMaintenanceModel> groupedSchedules = {};
                                   
-                                  bool isToday(DateTime date) {
-                                    final now = DateTime.now();
-                                    return date.year == now.year &&
-                                        date.month == now.month &&
-                                        date.day == now.day;
-                                  }
+                                  // Tanggal Hari Ini
+                                  final now = DateTime.now();
+                                  final today = DateTime(now.year, now.month, now.day);
 
                                   void addSchedule({
                                     required String field,
@@ -360,112 +339,100 @@ class _FarmerHomeContent extends StatelessWidget {
                                     required DateTime date,
                                     required String specificTanamId,
                                   }) {
-                                    if (!isToday(date)) return;
+                                    final dateKey = DateFormat('yyyy-MM-dd').format(date);
+                                    // ID Unik untuk DB
+                                    final docId = 'MAINTENANCE_${info.uid}_${specificTanamId}_${field}_$dateKey';
 
-                                    final key = '${field}_${DateFormat('yyyy-MM-dd').format(date.toLocal())}_$specificTanamId';
-                                    final isDone = statusMap[key] ?? false;
+                                    // Cek status dari DB
+                                    final isDone = statusMap[docId] ?? false;
 
-                                    // --- PERBAIKAN: Jika sudah selesai, JANGAN tambahkan ke list ---
-                                    if (isDone) return; 
-                                    // -----------------------------------------------------------------
-
-                                    bool isDuplicate = schedules.any((s) => s.maintenanceName == title && s.description == description);
-                                    if(isDuplicate) return; 
-
-                                    schedules.add(
-                                      PlantMaintenanceModel(
-                                        maintenanceName: title,
-                                        description: description,
-                                        date: DateFormat('dd MMMM yyyy').format(date),
-                                        time: '09:00',
-                                        isDone: isDone,
-                                        onTap: () {
-                                          Navigator.pushNamed(
-                                            context,
-                                            '/maintenance_detail',
-                                            arguments: {
-                                              'id_petani': info.uid,
-                                              'id_tanaman': info.plantId,
-                                              'tanam_id': specificTanamId,
-                                              'field': field,
-                                              'tanggal': date,
-                                              'is_done': isDone,
-                                              'title': title,
-                                              'description': description,
-                                            },
-                                          );
-                                        },
-                                      ),
+                                    // Buat Model Baru
+                                    final newModel = PlantMaintenanceModel(
+                                      maintenanceName: title,
+                                      description: description,
+                                      date: DateFormat('dd MMMM yyyy').format(date),
+                                      time: '09:00',
+                                      isDone: isDone,
+                                      onTap: () {
+                                        Navigator.pushNamed(
+                                          context,
+                                          '/maintenance_detail',
+                                          arguments: {
+                                            'id_petani': info.uid,
+                                            'id_tanaman': info.plantId,
+                                            'tanam_id': specificTanamId,
+                                            'field': field,
+                                            'tanggal': date,
+                                            'is_done': isDone,
+                                            'title': title,
+                                            'description': description,
+                                            'doc_id': docId,
+                                          },
+                                        );
+                                      },
                                     );
 
-                                    final uniqueNotifId = (title + date.toIso8601String() + specificTanamId).hashCode;
-                                    final scheduledTime = DateTime(date.year, date.month, date.day, 9, 0);
-
-                                    NotificationService.instance.scheduleLocalNotification(
-                                      id: uniqueNotifId,
-                                      title: title,
-                                      body: description,
-                                      scheduledDate: scheduledTime,
-                                    );
+                                    // LOGIKA GROUPING: Prioritaskan yang SUDAH SELESAI
+                                    if (groupedSchedules.containsKey(title)) {
+                                      final existing = groupedSchedules[title]!;
+                                      // Jika existing belum selesai, tapi yang baru ini selesai -> Timpa
+                                      if (!existing.isDone && isDone) {
+                                        groupedSchedules[title] = newModel;
+                                      }
+                                    } else {
+                                      groupedSchedules[title] = newModel;
+                                    }
                                   }
 
                                   for (var doc in sortedDocs) {
                                     final thisDocId = doc.id;
                                     final tglTanamRaw = doc.data()['tanggal_tanam'];
-                                    
                                     DateTime? tglTanam;
-                                    if (tglTanamRaw is Timestamp) {
-                                      tglTanam = tglTanamRaw.toDate();
-                                    } else if (tglTanamRaw is String) {
-                                      try {
-                                        tglTanam = DateTime.parse(tglTanamRaw);
-                                      } catch (_) {}
-                                    }
-
+                                    if (tglTanamRaw is Timestamp) tglTanam = tglTanamRaw.toDate();
+                                    else if (tglTanamRaw is String) try { tglTanam = DateTime.parse(tglTanamRaw); } catch (_) {}
                                     if (tglTanam == null) continue;
 
-                                    DateTime dateAir = calculateNextDate(intervalAir, tglTanam);
-                                    DateTime dateCek = calculateNextDate(intervalCek, tglTanam);
-                                    DateTime dateBersih = calculateNextDate(intervalBersih, tglTanam);
+                                    final start = DateTime(tglTanam.year, tglTanam.month, tglTanam.day);
+                                    final diff = today.difference(start).inDays;
 
-                                    addSchedule(
-                                      field: 'jadwal_pengecekan_air_dan_nutrisi',
-                                      title: 'Pengecekan Air & Nutrisi',
-                                      description: 'Cek kualitas air dan tambah nutrisi bila diperlukan.',
-                                      date: dateAir,
-                                      specificTanamId: thisDocId,
-                                    );
+                                    // FIX LOGIKA JADWAL: HANYA JIKA DIFF > 0 (BUKAN HARI TANAM)
+                                    // DAN SESUAI INTERVAL
+                                    bool isScheduleToday(int interval) {
+                                      return interval > 0 && diff > 0 && (diff % interval == 0);
+                                    }
 
-                                    addSchedule(
-                                      field: 'jadwal_pengecekan_tanaman',
-                                      title: 'Pengecekan Tanaman',
-                                      description: 'Periksa kondisi tanaman dan identifikasi hama/penyakit.',
-                                      date: dateCek,
-                                      specificTanamId: thisDocId,
-                                    );
+                                    if (isScheduleToday(intervalAir)) {
+                                       addSchedule(field: 'jadwal_pengecekan_air_dan_nutrisi', title: 'Pengecekan Air & Nutrisi', description: 'Cek kualitas air dan tambah nutrisi bila diperlukan.', date: today, specificTanamId: thisDocId);
+                                    }
+                                    if (isScheduleToday(intervalCek)) {
+                                       addSchedule(field: 'jadwal_pengecekan_tanaman', title: 'Pengecekan Tanaman', description: 'Periksa kondisi tanaman dan identifikasi hama/penyakit.', date: today, specificTanamId: thisDocId);
+                                    }
+                                    if (isScheduleToday(intervalBersih)) {
+                                       addSchedule(field: 'jadwal_pembersihan_instalasi', title: 'Pembersihan Instalasi', description: 'Bersihkan pipa dan instalasi hidroponik dari kotoran.', date: today, specificTanamId: thisDocId);
+                                    }
 
-                                    addSchedule(
-                                      field: 'jadwal_pembersihan_instalasi',
-                                      title: 'Pembersihan Instalasi',
-                                      description: 'Bersihkan pipa dan instalasi hidroponik dari kotoran.',
-                                      date: dateBersih,
-                                      specificTanamId: thisDocId,
-                                    );
-
-                                    final panenDate = tglTanam.add(Duration(days: masaTanam));
-                                    if (isToday(panenDate)) {
+                                    // Panen
+                                    final panenDate = start.add(Duration(days: masaTanam));
+                                    final panenCheck = DateTime(panenDate.year, panenDate.month, panenDate.day);
+                                    if (panenCheck.compareTo(today) == 0) {
                                       addSchedule(
-                                        field: 'estimasi_panen',
-                                        title: 'Estimasi Panen',
-                                        description: 'Waktunya panen berdasarkan masa tanam!',
-                                        date: panenDate,
-                                        specificTanamId: thisDocId,
+                                        field: 'estimasi_panen', 
+                                        title: 'Estimasi Panen', 
+                                        description: 'Waktunya panen untuk beberapa tanaman!', 
+                                        date: panenCheck, 
+                                        specificTanamId: thisDocId
                                       );
                                     }
                                   }
 
-                                  if (schedules.isNotEmpty) {
-                                    final uniqueTitles = schedules
+                                  // Konversi Map ke List
+                                  final schedules = groupedSchedules.values.toList();
+
+                                  // --- LOGIKA AGREGASI NOTIFIKASI ---
+                                  final activeSchedules = schedules.where((s) => !s.isDone).toList();
+                                  
+                                  if (activeSchedules.isNotEmpty) {
+                                    final uniqueTitles = activeSchedules
                                         .map((s) => s.maintenanceName)
                                         .toSet()
                                         .toList();
@@ -475,6 +442,14 @@ class _FarmerHomeContent extends StatelessWidget {
                                         .join("\n");
 
                                     _scheduleDailyAlarmSummary(summaryBody);
+
+                                    final notifTime = DateTime(now.year, now.month, now.day, 9, 0);
+                                    NotificationService.instance.scheduleLocalNotification(
+                                      id: 8888, 
+                                      title: 'Jadwal Perawatan Hari Ini',
+                                      body: summaryBody,
+                                      scheduledDate: notifTime,
+                                    );
                                   }
 
                                   if (schedules.isEmpty) {
@@ -493,6 +468,13 @@ class _FarmerHomeContent extends StatelessWidget {
                                       ),
                                     );
                                   }
+
+                                  // Sort agar tugas yang sudah selesai ada di paling bawah
+                                  schedules.sort((a, b) {
+                                    if (a.isDone && !b.isDone) return 1;
+                                    if (!a.isDone && b.isDone) return -1;
+                                    return 0;
+                                  });
 
                                   return Column(
                                     children: [
