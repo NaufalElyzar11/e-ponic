@@ -53,7 +53,6 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(15),
             child: StyledElevatedButton(
-              // Update logika tombol
               text: _isExporting ? 'Memproses...' : 'Ekspor Data (PDF)',
               onPressed: _isExporting ? null : _exportToPdf,
               foregroundColor: AppColors.primary,
@@ -95,7 +94,6 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
                           ? DateFormat('dd MMM yyyy').format(dt)
                           : 'Tanggal tidak tersedia';
                       
-                      // Gunakan created_at untuk waktu
                       final createdTs = data['created_at'] as Timestamp?;
                       final createdDt = createdTs?.toDate();
                       final timeStr =
@@ -136,16 +134,7 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
 
                       return TransactionStatusCard(
                         transaction: model,
-                        onPaymentStatusChanged: (value) {
-                          final isPaid = value == 'Lunas';
-                          if (model.id != null) {
-                            TransactionService.instance
-                                .updatePaymentStatus(
-                              transactionId: model.id!,
-                              isPaid: isPaid,
-                            );
-                          }
-                        },
+                        // Callback onPaymentStatusChanged DIHAPUS
                         onDelete: () {
                           if (model.id != null) {
                             _confirmDelete(context, model.id!);
@@ -163,7 +152,6 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
                             );
                           }
                         },
-                        // onAssign dihapus karena transaksi otomatis muncul ke petani
                         onAssign: null,
                       );
                     },
@@ -207,14 +195,12 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
     );
   }
 
-  // --- FUNGSI EKSPOR PDF ---
   Future<void> _exportToPdf() async {
     setState(() {
       _isExporting = true;
     });
 
     try {
-      // 1. Ambil data transaksi
       final snapshot = await FirebaseFirestore.instance
           .collection('transaksi')
           .orderBy('tanggal', descending: true)
@@ -231,24 +217,19 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
         return;
       }
 
-      // 2. Buat PDF
       final pdf = pw.Document();
       final String dateNow = DateFormat('dd MMMM yyyy, HH:mm').format(DateTime.now());
 
-      // Header Tabel
       final List<List<String>> tableData = [
         ['Tgl', 'Pelanggan', 'Alamat', 'Pesanan', 'Total', 'Bayar', 'Kirim'],
       ];
 
-      // Isi Tabel
       for (var doc in docs) {
         final data = doc.data();
         
-        // Format Tanggal
         final ts = data['tanggal'] as Timestamp?;
         final dateStr = ts != null ? DateFormat('dd/MM/yy').format(ts.toDate()) : 'Tanggal tidak tersedia';
 
-        // Format Item (Misal: Selada(2), Pakcoy(1))
         final items = (data['items'] as List<dynamic>? ?? []);
         String itemsStr = items.isEmpty 
             ? 'Tidak ada item' 
@@ -256,7 +237,6 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
                 return "${i['nama_tanaman'] ?? 'Tanaman'}(${i['jumlah'] ?? 0})";
               }).join(', ');
 
-        // Format Status
         final isPaid = (data['is_paid'] ?? false) ? 'Lunas' : 'Belum';
         final isDeliver = (data['is_deliver'] ?? false) ? 'Dikirim' : 'Proses';
         final total = (data['total_harga'] as num?)?.toStringAsFixed(0) ?? '0';
@@ -274,7 +254,7 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
 
       pdf.addPage(
         pw.MultiPage(
-          pageFormat: PdfPageFormat.a4.landscape, // Landscape agar muat banyak kolom
+          pageFormat: PdfPageFormat.a4.landscape, 
           margin: const pw.EdgeInsets.all(32),
           build: (pw.Context context) {
             return [
@@ -294,14 +274,14 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
                 data: tableData,
                 border: null,
                 headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 10),
-                cellStyle: const pw.TextStyle(fontSize: 9), // Font lebih kecil untuk tabel padat
+                cellStyle: const pw.TextStyle(fontSize: 9), 
                 headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF014421)),
                 rowDecoration: const pw.BoxDecoration(
                   border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5)),
                 ),
                 cellAlignments: {
                   0: pw.Alignment.center,
-                  4: pw.Alignment.centerRight, // Total rata kanan
+                  4: pw.Alignment.centerRight, 
                   5: pw.Alignment.center,
                   6: pw.Alignment.center,
                 },
