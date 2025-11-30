@@ -104,8 +104,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       hintText: 'Masukkan nama pengguna',
                       prefixIcon: Icons.person,
                       inputFormatters: [
-                        // Hanya memperbolehkan huruf, spasi, titik (.), dan dash (-)
-                        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s.\-]')),
+                        // [REVISI] Hanya memperbolehkan huruf, spasi, dan titik (.)
+                        // Tanda dash (-) telah dihapus dari regex
+                        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s.]')),
                         LengthLimitingTextInputFormatter(30), // Batasi maksimal 30 karakter
                       ],
                       validator: (value) {
@@ -136,7 +137,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           return 'Silakan masukkan email';
                         }
                         final email = value.trim().toLowerCase();
-                        // Validasi: harus berakhiran @gmail.com atau @*.ac.id (misalnya @ulm.ac.id)
+                        // Validasi: harus berakhiran @gmail.com atau @*.ac.id
                         final isGmail = email.endsWith('@gmail.com');
                         final isAcId = RegExp(r'@[a-zA-Z0-9.-]+\.ac\.id$').hasMatch(email);
                         
@@ -222,9 +223,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     StyledTextFormField(
                       controller: _passwordController,
                       labelText: 'Kata Sandi',
-                      hintText: 'Minimal 6 karakter, huruf & angka',
+                      hintText: '6-15 karakter, huruf & angka', // Hint disesuaikan
                       prefixIcon: Icons.lock_outline_rounded,
                       obscureText: !_isPasswordVisible,
+                      inputFormatters: [
+                        // [REVISI] Batasi maksimal 15 karakter
+                        LengthLimitingTextInputFormatter(15), 
+                      ],
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Silakan masukkan kata sandi';
@@ -265,6 +270,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       hintText: 'Masukkan kembali kata sandi',
                       prefixIcon: Icons.lock_outline_rounded,
                       obscureText: !_isConfirmPasswordVisible,
+                      inputFormatters: [
+                        // [REVISI] Batasi maksimal 15 karakter juga untuk konfirmasi
+                        LengthLimitingTextInputFormatter(15), 
+                      ],
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Silakan konfirmasi kata sandi';

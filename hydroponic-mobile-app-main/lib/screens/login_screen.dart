@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Tambahkan import ini untuk InputFormatter
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -59,6 +60,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         labelText: 'Email atau Username',
                         hintText: 'Masukkan email atau username Anda',
                         prefixIcon: Icons.person,
+                        // Note: Tidak menerapkan filter karakter username disini 
+                        // karena field ini juga menerima Email (butuh @, angka, dll).
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Silakan masukkan email atau username Anda';
@@ -75,14 +78,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         hintText: 'Masukkan kata sandi Anda',
                         prefixIcon: Icons.lock_outline_rounded,
                         obscureText: !_isPasswordVisible,
+                        inputFormatters: [
+                          // [UPDATE] Batasi maksimal 15 karakter (sama seperti Register)
+                          LengthLimitingTextInputFormatter(15),
+                        ],
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Silakan masukkan kata sandi Anda';
                           }
-                          // if (value.length < 6) {
-                          //   return 'Kata sandi harus terdiri dari minimal 6 karakter';
-                          // }
-                          // Ini nanti dulu
                           return null;
                         },
                         suffixIcon: IconButton(
@@ -109,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         foregroundColor: Colors.white,
                         backgroundColor: AppColors.primary,
                       ),
-                      SizedBox(height: 100)             
+                      SizedBox(height: 100)            
                     ],
                   ),
                 ),
@@ -120,42 +123,6 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-
-  // Specific Widget Builders
-
-  // Widget _buildForgotPasswordButton() {
-  //   return Padding(
-  //     padding: const EdgeInsets.all(0.0),
-  //     child: Align(
-  //       alignment: Alignment.centerRight,
-  //       child: TextButton(
-  //         onPressed: () {
-  //           /// do something
-  //         },
-  //         style: ButtonStyle(
-  //           overlayColor: WidgetStateProperty.resolveWith(
-  //             (Set<WidgetState> states) {
-  //               if (states.contains(WidgetState.pressed)) {
-  //                 // ignore: deprecated_member_use
-  //                 return Color.fromARGB(255, 189, 189, 189).withOpacity(0.2);
-  //               }                
-  //               return null; 
-  //             },
-  //           ),
-  //         ),
-  //         child: const Text(
-  //           'Lupa Kata Sandi?',
-  //           style: TextStyle(
-  //             fontSize: 14,
-  //             fontWeight: FontWeight.w400,
-  //             fontFamily: 'Roboto',
-  //             color: Color.fromARGB(255, 59, 59, 59),
-  //           ),
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
 
   Widget _gap() => const SizedBox(height: 16);
 
