@@ -221,7 +221,7 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
       final String dateNow = DateFormat('dd MMMM yyyy, HH:mm').format(DateTime.now());
 
       final List<List<String>> tableData = [
-        ['Tgl', 'Pelanggan', 'Alamat', 'Pesanan', 'Total', 'Bayar', 'Kirim'],
+        ['Tgl', 'Pelanggan', 'Alamat', 'Pesanan', 'Total Bayar', 'Pembayaran', 'Pengiriman'],
       ];
 
       for (var doc in docs) {

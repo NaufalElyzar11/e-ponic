@@ -175,7 +175,7 @@ class NotificationService {
         case 'Petani':
           final plantId = userData['id_tanaman'] as String?;
           return _getFarmerNotificationsStream(user.uid, plantId);
-        case 'Admin': return Stream.fromFuture(_getAdminNotifications());
+        case 'Admin': return _getAdminNotificationsStream();
         case 'Super Admin': return Stream.fromFuture(_getSuperAdminNotifications());
         default: return Stream.value([]);
       }
@@ -312,6 +312,69 @@ class NotificationService {
         });
   }
 
+  Stream<List<Map<String, dynamic>>> _getAdminNotificationsStream() {
+    return _db.collection('transaksi')
+        .orderBy('updated_at', descending: true)
+        .limit(20) 
+        .snapshots()
+        .map((snapshot) {
+          final notifications = <Map<String, dynamic>>[];
+
+          for (final doc in snapshot.docs) {
+            final data = doc.data();
+            // Ambil waktu spesifik per kejadian
+            final createdAt = (data['created_at'] as Timestamp?)?.toDate();
+            final harvestedAt = (data['harvested_at'] as Timestamp?)?.toDate();
+            final deliveredAt = (data['delivered_at'] as Timestamp?)?.toDate();
+            
+            final namaPelanggan = data['nama_pelanggan'] ?? 'Pelanggan';
+
+            // 1. Notifikasi Panen
+            // Gunakan harvestedAt sebagai timestamp. Jika null, pakai createdAt (biasanya data lama)
+            if (data['is_harvest'] == true) {
+              notifications.add(_formatNotification(
+                id: '${doc.id}_harvest_alert',
+                title: 'Tanaman Dipanen',
+                body: 'Pesanan untuk $namaPelanggan telah selesai dipanen.',
+                timestamp: harvestedAt ?? createdAt ?? DateTime(2000), // <-- UBAH INI
+                type: 'admin_harvest',
+                referenceId: doc.id,
+              ));
+            }
+
+            // 2. Notifikasi Pengiriman Selesai
+            // Gunakan deliveredAt sebagai timestamp
+            if (data['is_deliver'] == true) {
+              notifications.add(_formatNotification(
+                id: '${doc.id}_delivery_done',
+                title: 'Pengiriman Selesai',
+                body: 'Pesanan untuk $namaPelanggan telah berhasil dikirim.',
+                timestamp: deliveredAt ?? createdAt ?? DateTime(2000), // <-- UBAH INI
+                type: 'admin_delivery_done',
+                referenceId: doc.id,
+              ));
+            }
+            
+            // 3. Pembayaran (Opsional, perlu tambah field paid_at di TransactionService jika mau presisi)
+            if (data['is_paid'] == true) {
+               // Untuk saat ini pakai createdAt karena biasanya bayar di awal
+              notifications.add(_formatNotification(
+                id: '${doc.id}_paid_alert',
+                title: 'Pembayaran Diterima',
+                body: 'Pesanan $namaPelanggan telah lunas.',
+                timestamp: createdAt ?? DateTime(2000),
+                type: 'admin_payment',
+                referenceId: doc.id,
+              ));
+            }
+          }
+          
+          // Urutkan
+          notifications.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
+          return notifications;
+        });
+  }
+
   // --- LOGIKA HITUNG JADWAL (DENGAN FILTER WAKTU JAM 9) ---
   Future<List<Map<String, dynamic>>> _getFarmerMaintenance(String userId, String plantId) async {
     final notifications = <Map<String, dynamic>>[];
@@ -419,7 +482,6 @@ class NotificationService {
     return controller.stream;
   }
 
-  Future<List<Map<String, dynamic>>> _getAdminNotifications() async => [];
   Future<List<Map<String, dynamic>>> _getSuperAdminNotifications() async => [];
   Future<void> markAsRead(String notificationId) async {}
 }

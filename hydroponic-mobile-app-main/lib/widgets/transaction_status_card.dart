@@ -32,7 +32,7 @@ class TransactionStatusCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Nama Penerima:',
+                  'Nama Pelanggan:',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -111,7 +111,18 @@ class TransactionStatusCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Status Panen', style: TextStyle(color: Colors.white),),
-                      Text((transaction.isHarvest) ? 'Sudah' : 'Belum', style: const TextStyle(color: Colors.white),)
+                      // Text((transaction.isHarvest) ? 'Sudah' : 'Belum', style: const TextStyle(color: Colors.white),),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: transaction.isHarvest ? Colors.green.shade600 : Colors.red.shade600,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          transaction.isHarvest ? 'Selesai' : 'Belum Dipanen',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 5),
@@ -120,7 +131,18 @@ class TransactionStatusCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Status Pengiriman', style: TextStyle(color: Colors.white),),
-                      Text((transaction.isDeliver) ? 'Sudah' : 'Belum', style: const TextStyle(color: Colors.white),)
+                      // Text((transaction.isDeliver) ? 'Sudah' : 'Belum', style: const TextStyle(color: Colors.white),),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: transaction.isDeliver ? Colors.green.shade600 : Colors.red.shade600,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          transaction.isDeliver ? 'Selesai' : 'Belum Dikirim',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 5),

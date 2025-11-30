@@ -154,7 +154,11 @@ class _FarmerHarvestScreenState extends State<FarmerHarvestScreen> {
                                 await FirebaseFirestore.instance
                                     .collection('transaksi')
                                     .doc(tsDoc.id)
-                                    .update({'is_harvest': true});
+                                    .update({
+                                      'is_harvest': true,
+                                      'harvested_at': FieldValue.serverTimestamp(),
+                                      'updated_at': FieldValue.serverTimestamp(),
+                                    });
                                 
                                 // Opsional: Tampilkan snackbar sukses
                                 if (context.mounted) {

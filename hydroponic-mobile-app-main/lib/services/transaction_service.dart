@@ -117,6 +117,9 @@ class TransactionService {
       'items': items,
       'total_harga': totalHarga,
       'created_at': FieldValue.serverTimestamp(),
+      'updated_at': FieldValue.serverTimestamp(),
+      'harvested_at': FieldValue.serverTimestamp(),
+      'delivered_at': FieldValue.serverTimestamp(),
     });
 
     final batch = _db.batch();
