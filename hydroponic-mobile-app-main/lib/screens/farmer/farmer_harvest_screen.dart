@@ -147,7 +147,7 @@ class _FarmerHarvestScreenState extends State<FarmerHarvestScreen> {
                                     .add({
                                   'id_petani': user.uid,
                                   'jumlah_panen': assignment.plantQty,
-                                  'tanggal_panen': tsDoc['tanggal'],
+                                  'tanggal_panen': FieldValue.serverTimestamp(),
                                   'created_at': FieldValue.serverTimestamp(),
                                 });
                                 

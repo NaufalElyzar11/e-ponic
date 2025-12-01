@@ -17,61 +17,89 @@ class LogisticAssignmentDetailScreen extends StatefulWidget {
   const LogisticAssignmentDetailScreen({super.key});
 
   @override
-  State<LogisticAssignmentDetailScreen> createState() => _LogisticAssignmentDetailScreenState();
+  State<LogisticAssignmentDetailScreen> createState() =>
+      _LogisticAssignmentDetailScreenState();
 }
 
-class _LogisticAssignmentDetailScreenState extends State<LogisticAssignmentDetailScreen> {
+class _LogisticAssignmentDetailScreenState
+    extends State<LogisticAssignmentDetailScreen> {
   String? _selectedCourierId;
+  
+  // 1. Definisikan variabel untuk menampung Stream & Future
+  late Stream<QuerySnapshot<Map<String, dynamic>>> _courierStream;
+  Future<DocumentSnapshot<Map<String, dynamic>>>? _transactionFuture;
+  String? _transactionId;
+
+  @override
+  void initState() {
+    super.initState();
+    // 2. Inisialisasi Stream di sini (hanya sekali)
+    _courierStream = FirebaseFirestore.instance
+        .collection('pengguna')
+        .where('posisi', isEqualTo: 'Kurir')
+        .orderBy('nama_pengguna')
+        .snapshots();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 3. Inisialisasi Future di sini (karena butuh ModalRoute args)
+    if (_transactionFuture == null) {
+      final args = ModalRoute.of(context)?.settings.arguments as String?;
+      if (args != null) {
+        _transactionId = args;
+        _transactionFuture = FirebaseFirestore.instance
+            .collection('transaksi')
+            .doc(_transactionId)
+            .get();
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final transactionId =
-        ModalRoute.of(context)?.settings.arguments as String?;
-
-    if (transactionId == null) {
+    if (_transactionId == null) {
       return const Scaffold(
         body: Center(child: Text('Transaksi tidak ditemukan')),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        leading: IconButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          icon: Icon(Icons.arrow_back),
-        ),
-        title: const Text(
-          'Detail Penugasan',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        titleSpacing: 10,
-        foregroundColor: Colors.white,
-        backgroundColor: AppColors.primary,
-      ),
-      body: Container(
-        padding: EdgeInsets.all(20),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              _buildAssignmentCard(transactionId),
-              const SizedBox(height: 20),
-              _buildAssignForm(transactionId),
-            ],
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          leading: IconButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            icon: const Icon(Icons.arrow_back),
           ),
+          title: const Text(
+            'Detail Penugasan',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          titleSpacing: 10,
+          foregroundColor: Colors.white,
+          backgroundColor: AppColors.primary,
         ),
-      )
-    );
+        body: Container(
+          padding: const EdgeInsets.all(20),
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildAssignmentCard(), // Tidak perlu pass ID lagi
+                const SizedBox(height: 20),
+                _buildAssignForm(), // Tidak perlu pass ID lagi
+              ],
+            ),
+          ),
+        ));
   }
 
-  Widget _buildAssignmentCard(String transactionId) {
+  Widget _buildAssignmentCard() {
+    // 4. Gunakan variabel _transactionFuture
     return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      future: FirebaseFirestore.instance
-          .collection('transaksi')
-          .doc(transactionId)
-          .get(),
+      future: _transactionFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -81,8 +109,7 @@ class _LogisticAssignmentDetailScreenState extends State<LogisticAssignmentDetai
         }
 
         final data = snapshot.data!.data()!;
-        final items =
-            (data['items'] as List<dynamic>? ?? <dynamic>[]);
+        final items = (data['items'] as List<dynamic>? ?? <dynamic>[]);
 
         final plantQuantity = items.map((item) {
           final m = item as Map<String, dynamic>;
@@ -96,21 +123,17 @@ class _LogisticAssignmentDetailScreenState extends State<LogisticAssignmentDetai
           );
         }).toList();
 
-        // --- PERBAIKAN DI SINI ---
         final dt = (data['tanggal'] as Timestamp?)?.toDate();
-        final createdAt = (data['created_at'] as Timestamp?)?.toDate(); // Ambil created_at
+        final createdAt = (data['created_at'] as Timestamp?)?.toDate();
 
-        final dateStr =
-            dt != null ? DateFormat('dd MMM yyyy').format(dt) : '';
-        
-        // Gunakan createdAt untuk jam, jika ada.
-        final timeStr = createdAt != null 
-            ? DateFormat('HH:mm').format(createdAt) 
+        final dateStr = dt != null ? DateFormat('dd MMM yyyy').format(dt) : '';
+
+        final timeStr = createdAt != null
+            ? DateFormat('HH:mm').format(createdAt)
             : (dt != null ? DateFormat('HH:mm').format(dt) : '');
-        // -------------------------
-        
+
         final tx = TransactionModel(
-          id: transactionId,
+          id: _transactionId,
           customerName: (data['nama_pelanggan'] ?? '') as String,
           plantQuantity: plantQuantity,
           address: (data['alamat'] ?? '') as String,
@@ -136,7 +159,7 @@ class _LogisticAssignmentDetailScreenState extends State<LogisticAssignmentDetai
     );
   }
 
-  Widget _buildAssignForm(String transactionId) {
+  Widget _buildAssignForm() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -146,12 +169,9 @@ class _LogisticAssignmentDetailScreenState extends State<LogisticAssignmentDetai
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
+        // 5. Gunakan variabel _courierStream
         StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance
-              .collection('pengguna')
-              .where('posisi', isEqualTo: 'Kurir')
-              .orderBy('nama_pengguna')
-              .snapshots(),
+          stream: _courierStream,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -187,6 +207,9 @@ class _LogisticAssignmentDetailScreenState extends State<LogisticAssignmentDetai
                   )
                   .toList(),
               onChanged: (value) {
+                // Saat setState dipanggil, build() jalan lagi
+                // Tapi karena kita pakai _courierStream yang sama,
+                // StreamBuilder TIDAK akan reset ke 'waiting'.
                 setState(() {
                   _selectedCourierId = value;
                 });
@@ -206,13 +229,11 @@ class _LogisticAssignmentDetailScreenState extends State<LogisticAssignmentDetai
           onPressed: () async {
             if (_selectedCourierId == null) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('Silakan pilih kurir')),
+                const SnackBar(content: Text('Silakan pilih kurir')),
               );
               return;
             }
 
-            // Tanggal pengiriman otomatis: maksimal esok hari pukul 23:59
             final now = DateTime.now();
             final autoDate = DateTime(
               now.year,
@@ -223,7 +244,7 @@ class _LogisticAssignmentDetailScreenState extends State<LogisticAssignmentDetai
             );
 
             await ShippingService.instance.assignCourier(
-              transactionId: transactionId,
+              transactionId: _transactionId!,
               courierId: _selectedCourierId!,
               tanggalPengiriman: autoDate,
             );
@@ -240,5 +261,4 @@ class _LogisticAssignmentDetailScreenState extends State<LogisticAssignmentDetai
       ],
     );
   }
-  
 }

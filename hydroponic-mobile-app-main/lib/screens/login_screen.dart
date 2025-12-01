@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Tambahkan import ini untuk InputFormatter
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -8,6 +8,8 @@ import 'package:hydroponics_app/widgets/styled_elevated_button.dart';
 import 'package:hydroponics_app/widgets/styled_text_form_field.dart';
 import 'package:hydroponics_app/widgets/log_reg_header.dart';
 import 'package:hydroponics_app/services/auth_service.dart';
+// Tambahkan import ini
+import 'package:hydroponics_app/services/notification_service.dart'; 
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -51,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       // Header
-                      LogRegHeader(title: "MASUK", subtitle: "Selamat Datang"),
+                      const LogRegHeader(title: "MASUK", subtitle: "Selamat Datang"),
                       _gap(),
 
                       // Email atau Username Field
@@ -60,8 +62,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         labelText: 'Email atau Username',
                         hintText: 'Masukkan email atau username Anda',
                         prefixIcon: Icons.person,
-                        // Note: Tidak menerapkan filter karakter username disini 
-                        // karena field ini juga menerima Email (butuh @, angka, dll).
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Silakan masukkan email atau username Anda';
@@ -79,7 +79,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: Icons.lock_outline_rounded,
                         obscureText: !_isPasswordVisible,
                         inputFormatters: [
-                          // [UPDATE] Batasi maksimal 15 karakter (sama seperti Register)
                           LengthLimitingTextInputFormatter(15),
                         ],
                         validator: (value) {
@@ -112,7 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         foregroundColor: Colors.white,
                         backgroundColor: AppColors.primary,
                       ),
-                      SizedBox(height: 100)            
+                      const SizedBox(height: 100)
                     ],
                   ),
                 ),
@@ -142,6 +141,12 @@ class _LoginScreenState extends State<LoginScreen> {
       if (user == null) {
         throw Exception('Login gagal.');
       }
+
+      // --- PERBAIKAN: Restart Notifikasi Service ---
+      // Ini penting agar NotificationService mendeteksi ulang Role user yang baru login
+      // dan mulai mendengarkan stream yang sesuai (misal: stream khusus Admin).
+      NotificationService.instance.startListening();
+      // ---------------------------------------------
 
       // Ambil data pengguna dari Firestore untuk menentukan role dan routing
       final doc = await FirebaseFirestore.instance

@@ -115,8 +115,14 @@ class NotificationService {
   // --- 3. LISTENER UTAMA ---
   void startListening() {
     stopListening();
+    // Reset waktu cek ke SEKARANG saat listener dimulai ulang.
+    // Agar user baru tidak mendapat notifikasi sampah dari sesi sebelumnya.
+    _lastCheckTime = DateTime.now(); 
+    
     if (!_initialized) initialize().then((_) => _listen());
     else _listen();
+    
+    print("🔔 NotificationService: Listening started for current user.");
   }
 
   void _listen() {

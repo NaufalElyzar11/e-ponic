@@ -51,6 +51,8 @@ dependencies:
   timezone: ^0.9.4
   alarm: ^4.0.0
 
+  flutter_background_service: ^5.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

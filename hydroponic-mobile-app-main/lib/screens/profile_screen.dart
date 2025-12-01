@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:hydroponics_app/services/auth_service.dart';
+// Tambahkan import ini
+import 'package:hydroponics_app/services/notification_service.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -79,7 +81,7 @@ class ProfileScreen extends StatelessWidget {
                 heightFactor: 1.5,
                 child: Column(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.account_circle,
                       size: 150,
                       color: Color.fromARGB(255, 1, 68, 33),
@@ -124,13 +126,41 @@ class ProfileScreen extends StatelessWidget {
               ),
               title: const Text('Keluar'),
               onTap: () async {
-                await AuthService.instance.signOut();
-                if (context.mounted) {
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    '/login',
-                    (route) => false,
-                  );
+                // Tampilkan dialog konfirmasi logout (Opsional)
+                final shouldLogout = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Konfirmasi'),
+                    content: const Text('Apakah Anda yakin ingin keluar?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Batal'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Keluar', style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (shouldLogout == true) {
+                  // --- PERBAIKAN: Stop Notifikasi Service ---
+                  // Matikan listener agar tidak ada memory leak atau notifikasi
+                  // yang salah alamat ke user berikutnya.
+                  NotificationService.instance.stopListening();
+                  // ------------------------------------------
+
+                  await AuthService.instance.signOut();
+                  
+                  if (context.mounted) {
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/login',
+                      (route) => false,
+                    );
+                  }
                 }
               },
             ),
