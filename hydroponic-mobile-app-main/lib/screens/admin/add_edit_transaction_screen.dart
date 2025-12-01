@@ -157,7 +157,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                     ),
                     NoLeadingTextFormField(
                       controller: _buyerAddressController,
-                      hintText: 'Masukkan alamat pembeli', 
+                      hintText: 'Masukkan alamat pembeli (maksimal 30 kata)', 
                       inputType: TextInputType.text,
                       inputFormatters: [
                         // Hanya memperbolehkan huruf, angka, spasi, titik (.), koma (,), dan koma atas (')
@@ -174,6 +174,11 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                         // Validasi: harus ada huruf
                         if (!RegExp(r'[a-zA-Z]').hasMatch(value)) {
                           return 'Alamat harus mengandung huruf';
+                        }
+                        // Validasi: maksimal 30 kata
+                        final words = value.trim().split(RegExp(r'\s+')).where((word) => word.isNotEmpty).toList();
+                        if (words.length > 30) {
+                          return 'Alamat maksimal 30 kata (saat ini: ${words.length} kata)';
                         }
                         return null;
                       },
