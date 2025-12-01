@@ -21,10 +21,13 @@ class _FarmerHistoryScreenState extends State<FarmerHistoryScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Riwayat Tanam', style: TextStyle(fontWeight: FontWeight.bold),),
+        title: const Text(
+          'Riwayat Tanam',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         titleSpacing: 25,
         foregroundColor: Colors.white,
-        backgroundColor: Color.fromARGB(255, 1, 68, 33),
+        backgroundColor: const Color.fromARGB(255, 1, 68, 33),
         automaticallyImplyLeading: false,
       ),
       body: LayoutBuilder(
@@ -42,8 +45,7 @@ class _FarmerHistoryScreenState extends State<FarmerHistoryScreen> {
                 .orderBy('tanggal_tanam', descending: true)
                 .snapshots(),
             builder: (context, tanamSnapshot) {
-              if (tanamSnapshot.connectionState ==
-                  ConnectionState.waiting) {
+              if (tanamSnapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
 
@@ -58,21 +60,20 @@ class _FarmerHistoryScreenState extends State<FarmerHistoryScreen> {
                 builder: (context, panenSnapshot) {
                   if (panenSnapshot.connectionState ==
                       ConnectionState.waiting) {
-                    return const Center(
-                        child: CircularProgressIndicator());
+                    return const Center(child: CircularProgressIndicator());
                   }
 
                   final panenDocs = panenSnapshot.data?.docs ?? [];
 
                   final Map<String, _HistoryAgg> map = {};
 
+                  // --- PROSES DATA TANAM ---
                   for (final doc in tanamDocs) {
                     final data = doc.data();
                     final ts = data['tanggal_tanam'] as Timestamp?;
                     final d = ts?.toDate();
                     if (d == null) continue;
-                    final key =
-                        DateFormat('yyyy-MM-dd').format(d.toLocal());
+                    final key = DateFormat('yyyy-MM-dd').format(d.toLocal());
                     map.putIfAbsent(key, () => _HistoryAgg());
                     map[key]!.tanam += (data['jumlah_tanam'] as int? ?? 0);
                     map[key]!.tanamIds.add(doc.id);
@@ -83,13 +84,13 @@ class _FarmerHistoryScreenState extends State<FarmerHistoryScreen> {
                     });
                   }
 
+                  // --- PROSES DATA PANEN ---
                   for (final doc in panenDocs) {
                     final data = doc.data();
                     final ts = data['tanggal_panen'] as Timestamp?;
                     final d = ts?.toDate();
                     if (d == null) continue;
-                    final key =
-                        DateFormat('yyyy-MM-dd').format(d.toLocal());
+                    final key = DateFormat('yyyy-MM-dd').format(d.toLocal());
                     map.putIfAbsent(key, () => _HistoryAgg());
                     map[key]!.panen += (data['jumlah_panen'] as int? ?? 0);
                     map[key]!.panenIds.add(doc.id);
@@ -106,56 +107,89 @@ class _FarmerHistoryScreenState extends State<FarmerHistoryScreen> {
                   final List<PlantHistoryModel> dataList = [];
                   for (final key in keys) {
                     final d = DateTime.parse(key);
-                    final label =
-                        DateFormat('dd MMM yyyy').format(d.toLocal());
+                    final label = DateFormat('dd MMM yyyy').format(d.toLocal());
                     final agg = map[key]!;
-                    // Simpan reference ke docs untuk digunakan di callback
+                    
+                    // Copy list agar aman digunakan dalam callback (closure)
                     final tanamDocsCopy = List<Map<String, dynamic>>.from(agg.tanamDocs);
                     final panenDocsCopy = List<Map<String, dynamic>>.from(agg.panenDocs);
                     final tanamIdsCopy = List<String>.from(agg.tanamIds);
                     final panenIdsCopy = List<String>.from(agg.panenIds);
-                    
-                    print('📊 Creating history item for $label: tanam=${tanamDocsCopy.length}, panen=${panenDocsCopy.length}');
-                    
+
                     dataList.add(PlantHistoryModel(
                       date: label,
                       plantQty: agg.tanam,
                       harvestQty: agg.panen,
+                      
+                      // Masukkan jumlah dokumen untuk logika UI
+                      plantDocCount: tanamDocsCopy.length,
+                      harvestDocCount: panenDocsCopy.length,
+
+                      // --- EDIT CALLBACKS ---
                       onPlantEdit: () {
-                        print('📝 onPlantEdit callback triggered for date: $label, docs: ${tanamDocsCopy.length}');
-                        if (tanamDocsCopy.isEmpty) {
-                          print('⚠️ tanamDocsCopy is empty!');
-                        }
                         _handleEditPlant(tanamDocsCopy);
-                      }, 
-                      onPlantDelete: () {
-                        _deleteDocs(
-                          collection: 'data_tanam',
-                          ids: tanamIdsCopy,
-                        );
                       },
                       onHarvestEdit: () {
-                        print('📝 onHarvestEdit callback triggered for date: $label, docs: ${panenDocsCopy.length}');
-                        if (panenDocsCopy.isEmpty) {
-                          print('⚠️ panenDocsCopy is empty!');
-                        }
                         _handleEditHarvest(panenDocsCopy);
-                      }, 
-                      onHarvestDelete: () {
-                        _deleteDocs(
-                          collection: 'data_panen',
-                          ids: panenIdsCopy,
+                      },
+
+                      // --- DELETE PER KATEGORI (CERDAS) ---
+                      onDeletePlant: () {
+                        _handleDeleteDocs(
+                          docs: tanamDocsCopy,
+                          collectionName: 'data_tanam',
+                          title: 'Tanam',
+                          unit: 'bibit',
+                          qtyKey: 'jumlah_tanam',
+                          dateKey: 'tanggal_tanam',
                         );
                       },
+                      onDeleteHarvest: () {
+                        _handleDeleteDocs(
+                          docs: panenDocsCopy,
+                          collectionName: 'data_panen',
+                          title: 'Panen',
+                          unit: 'panen',
+                          qtyKey: 'jumlah_panen',
+                          dateKey: 'tanggal_panen',
+                        );
+                      },
+
+                      // --- DELETE ALL (HAPUS TANGGAL INI) ---
                       onDeleteAll: () {
-                        _deleteDocs(
-                          collection: 'data_tanam',
-                          ids: tanamIdsCopy,
-                          alsoDeleteCollection2: 'data_panen',
-                          ids2: panenIdsCopy,
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Hapus Semua Data?'),
+                            content: Text(
+                                'Anda yakin ingin menghapus semua data pada tanggal $label?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: const Text('Batal'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(ctx);
+                                  _deleteDocs(
+                                    collection: 'data_tanam',
+                                    ids: tanamIdsCopy,
+                                    alsoDeleteCollection2: 'data_panen',
+                                    ids2: panenIdsCopy,
+                                  );
+                                },
+                                child: const Text('Hapus',
+                                    style: TextStyle(color: Colors.red)),
+                              ),
+                            ],
+                          ),
                         );
                       },
                     ));
+                  }
+
+                  if (dataList.isEmpty) {
+                    return const Center(child: Text('Belum ada riwayat.'));
                   }
 
                   return Container(
@@ -174,12 +208,12 @@ class _FarmerHistoryScreenState extends State<FarmerHistoryScreen> {
               );
             },
           );
-        }
-      )
-      
+        },
+      ),
     );
   }
 
+  /// Fungsi penghapusan dokumen secara batch
   Future<void> _deleteDocs({
     required String collection,
     required List<String> ids,
@@ -188,94 +222,155 @@ class _FarmerHistoryScreenState extends State<FarmerHistoryScreen> {
   }) async {
     final batch = FirebaseFirestore.instance.batch();
     for (final id in ids) {
-      batch.delete(
-          FirebaseFirestore.instance.collection(collection).doc(id));
+      batch.delete(FirebaseFirestore.instance.collection(collection).doc(id));
     }
     if (alsoDeleteCollection2 != null && ids2 != null) {
       for (final id in ids2) {
-        batch.delete(FirebaseFirestore.instance
-            .collection(alsoDeleteCollection2)
-            .doc(id));
+        batch.delete(
+            FirebaseFirestore.instance.collection(alsoDeleteCollection2).doc(id));
       }
     }
     await batch.commit();
+    
+    if(mounted) {
+       ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Data berhasil dihapus')),
+      );
+    }
   }
 
-  Future<void> _handleEditPlant(
-    List<Map<String, dynamic>> docs,
-  ) async {
-    print('🔧 _handleEditPlant called with ${docs.length} docs');
-    if (!mounted) {
-      print('❌ Widget not mounted');
+  /// Logika hapus cerdas: Konfirmasi langsung jika 1 data, Pilih list jika > 1 data
+  Future<void> _handleDeleteDocs({
+    required List<Map<String, dynamic>> docs,
+    required String collectionName,
+    required String title,
+    required String unit,
+    required String qtyKey,
+    required String dateKey,
+  }) async {
+    if (!mounted || docs.isEmpty) return;
+
+    // KASUS 1: Hanya ada satu data -> Konfirmasi langsung
+    if (docs.length == 1) {
+      final doc = docs.first;
+      final qty = doc[qtyKey];
+      
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text('Hapus Data $title'),
+          content: Text('Hapus data $qty $unit ini?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Batal'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _deleteDocs(collection: collectionName, ids: [doc['id']]);
+              },
+              child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
       return;
     }
-    
-    if (docs.isEmpty) {
-      print('⚠️ No docs to edit');
+
+    // KASUS 2: Ada banyak data -> Pilih mana yang dihapus
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Pilih Data $title yang Dihapus'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: docs.length,
+            separatorBuilder: (ctx, i) => const Divider(),
+            itemBuilder: (ctx, index) {
+              final doc = docs[index];
+              final date = DateFormat('HH:mm').format(doc[dateKey] as DateTime);
+              final qty = doc[qtyKey];
+
+              return ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: Text('$qty $unit'),
+                subtitle: Text('Jam Input: $date'),
+                onTap: () {
+                  // Tutup dialog list dulu
+                  Navigator.pop(ctx);
+                  
+                  // Tampilkan konfirmasi untuk item spesifik ini
+                  showDialog(
+                    context: context,
+                    builder: (confirmCtx) => AlertDialog(
+                      title: const Text('Konfirmasi Hapus'),
+                      content: Text('Yakin hapus data $qty $unit ini?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(confirmCtx),
+                          child: const Text('Batal'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(confirmCtx);
+                            _deleteDocs(collection: collectionName, ids: [doc['id']]);
+                          },
+                          child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- LOGIKA EDIT DATA TANAM ---
+  Future<void> _handleEditPlant(List<Map<String, dynamic>> docs) async {
+    if (!mounted || docs.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tidak ada data tanam untuk diedit')),
       );
       return;
     }
 
-    // Jika hanya ada satu dokumen, langsung edit
+    // Single Doc
     if (docs.length == 1) {
-      try {
-        final doc = docs.first;
-        final documentId = doc['id'] as String?;
-        final jumlah = doc['jumlah_tanam'] as int?;
-        final tanggal = doc['tanggal_tanam'] as DateTime?;
-        
-        if (documentId == null || jumlah == null || tanggal == null) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Data tidak valid untuk diedit')),
-            );
-          }
-          return;
-        }
-        
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => EditPlantDataScreen(
-              documentId: documentId,
-              currentJumlah: jumlah,
-              currentTanggal: tanggal,
-            ),
-          ),
-        );
-        if (result == true && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Data berhasil diperbarui')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
-          );
-        }
-      }
+      await _navigateToEditPlant(docs.first);
       return;
     }
 
-    // Jika ada multiple dokumen, tampilkan dialog untuk memilih
+    // Multiple Docs
     final selectedDoc = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Pilih Data yang Akan Diedit'),
+        title: const Text('Pilih Data Tanam'),
         content: SizedBox(
           width: double.maxFinite,
-          child: ListView.builder(
+          child: ListView.separated(
             shrinkWrap: true,
             itemCount: docs.length,
+            separatorBuilder: (ctx, i) => const Divider(),
             itemBuilder: (ctx, index) {
               final doc = docs[index];
-              final date = DateFormat('dd MMM yyyy').format(doc['tanggal_tanam'] as DateTime);
+              final date = DateFormat('HH:mm').format(doc['tanggal_tanam'] as DateTime);
               return ListTile(
+                leading: const Icon(Icons.edit, color: Colors.blue),
                 title: Text('${doc['jumlah_tanam']} bibit'),
-                subtitle: Text('Tanggal: $date'),
+                subtitle: Text('Jam Input: $date'),
                 onTap: () => Navigator.pop(ctx, doc),
               );
             },
@@ -285,118 +380,74 @@ class _FarmerHistoryScreenState extends State<FarmerHistoryScreen> {
     );
 
     if (selectedDoc != null && mounted) {
-      try {
-        final documentId = selectedDoc['id'] as String?;
-        final jumlah = selectedDoc['jumlah_tanam'] as int?;
-        final tanggal = selectedDoc['tanggal_tanam'] as DateTime?;
-        
-        if (documentId == null || jumlah == null || tanggal == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Data tidak valid untuk diedit')),
-          );
-          return;
-        }
-        
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => EditPlantDataScreen(
-              documentId: documentId,
-              currentJumlah: jumlah,
-              currentTanggal: tanggal,
-            ),
+      await _navigateToEditPlant(selectedDoc);
+    }
+  }
+
+  Future<void> _navigateToEditPlant(Map<String, dynamic> doc) async {
+    try {
+      final documentId = doc['id'] as String?;
+      final jumlah = doc['jumlah_tanam'] as int?;
+      final tanggal = doc['tanggal_tanam'] as DateTime?;
+
+      if (documentId == null || jumlah == null || tanggal == null) return;
+
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EditPlantDataScreen(
+            documentId: documentId,
+            currentJumlah: jumlah,
+            currentTanggal: tanggal,
           ),
+        ),
+      );
+
+      if (result == true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Data berhasil diperbarui')),
         );
-        if (result == true && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Data berhasil diperbarui')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
-          );
-        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
 
-  Future<void> _handleEditHarvest(
-    List<Map<String, dynamic>> docs,
-  ) async {
-    print('🔧 _handleEditHarvest called with ${docs.length} docs');
-    if (!mounted) {
-      print('❌ Widget not mounted');
-      return;
-    }
-    
-    if (docs.isEmpty) {
-      print('⚠️ No docs to edit');
+  // --- LOGIKA EDIT DATA PANEN ---
+  Future<void> _handleEditHarvest(List<Map<String, dynamic>> docs) async {
+    if (!mounted || docs.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tidak ada data panen untuk diedit')),
       );
       return;
     }
 
-    // Jika hanya ada satu dokumen, langsung edit
+    // Single Doc
     if (docs.length == 1) {
-      try {
-        final doc = docs.first;
-        final documentId = doc['id'] as String?;
-        final jumlah = doc['jumlah_panen'] as int?;
-        final tanggal = doc['tanggal_panen'] as DateTime?;
-        
-        if (documentId == null || jumlah == null || tanggal == null) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Data tidak valid untuk diedit')),
-            );
-          }
-          return;
-        }
-        
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => EditHarvestDataScreen(
-              documentId: documentId,
-              currentJumlah: jumlah,
-              currentTanggal: tanggal,
-            ),
-          ),
-        );
-        if (result == true && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Data berhasil diperbarui')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
-          );
-        }
-      }
+      await _navigateToEditHarvest(docs.first);
       return;
     }
 
-    // Jika ada multiple dokumen, tampilkan dialog untuk memilih
+    // Multiple Docs
     final selectedDoc = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Pilih Data yang Akan Diedit'),
+        title: const Text('Pilih Data Panen'),
         content: SizedBox(
           width: double.maxFinite,
-          child: ListView.builder(
+          child: ListView.separated(
             shrinkWrap: true,
             itemCount: docs.length,
+            separatorBuilder: (ctx, i) => const Divider(),
             itemBuilder: (ctx, index) {
               final doc = docs[index];
-              final date = DateFormat('dd MMM yyyy').format(doc['tanggal_panen'] as DateTime);
+              final date = DateFormat('HH:mm').format(doc['tanggal_panen'] as DateTime);
               return ListTile(
+                leading: const Icon(Icons.edit, color: Colors.blue),
                 title: Text('${doc['jumlah_panen']} panen'),
-                subtitle: Text('Tanggal: $date'),
+                subtitle: Text('Jam Input: $date'),
                 onTap: () => Navigator.pop(ctx, doc),
               );
             },
@@ -406,50 +457,48 @@ class _FarmerHistoryScreenState extends State<FarmerHistoryScreen> {
     );
 
     if (selectedDoc != null && mounted) {
-      try {
-        final documentId = selectedDoc['id'] as String?;
-        final jumlah = selectedDoc['jumlah_panen'] as int?;
-        final tanggal = selectedDoc['tanggal_panen'] as DateTime?;
-        
-        if (documentId == null || jumlah == null || tanggal == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Data tidak valid untuk diedit')),
-          );
-          return;
-        }
-        
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => EditHarvestDataScreen(
-              documentId: documentId,
-              currentJumlah: jumlah,
-              currentTanggal: tanggal,
-            ),
+      await _navigateToEditHarvest(selectedDoc);
+    }
+  }
+
+  Future<void> _navigateToEditHarvest(Map<String, dynamic> doc) async {
+    try {
+      final documentId = doc['id'] as String?;
+      final jumlah = doc['jumlah_panen'] as int?;
+      final tanggal = doc['tanggal_panen'] as DateTime?;
+
+      if (documentId == null || jumlah == null || tanggal == null) return;
+
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EditHarvestDataScreen(
+            documentId: documentId,
+            currentJumlah: jumlah,
+            currentTanggal: tanggal,
           ),
+        ),
+      );
+
+      if (result == true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Data berhasil diperbarui')),
         );
-        if (result == true && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Data berhasil diperbarui')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
-          );
-        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
 }
 
+// Class Helper untuk Agregasi Data
 class _HistoryAgg {
   int tanam = 0;
   int panen = 0;
   final List<String> tanamIds = [];
   final List<String> panenIds = [];
-  final List<Map<String, dynamic>> tanamDocs = []; // Store full doc data for edit
-  final List<Map<String, dynamic>> panenDocs = []; // Store full doc data for edit
+  final List<Map<String, dynamic>> tanamDocs = []; 
+  final List<Map<String, dynamic>> panenDocs = []; 
 }
-

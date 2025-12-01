@@ -61,7 +61,11 @@ class ShippingService {
         await _db
             .collection('transaksi')
             .doc(transaksiId)
-            .update({'is_deliver': true});
+            .update({
+              'is_deliver': true,
+              'delivered_at': FieldValue.serverTimestamp(),
+              'updated_at': FieldValue.serverTimestamp(),
+            });
       }
     }
   }

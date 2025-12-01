@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:hydroponics_app/models/transaction_model.dart';
 import 'package:hydroponics_app/theme/app_colors.dart';
-import 'package:hydroponics_app/widgets/styled_dropdown_button_form_field.dart';
-import 'package:hydroponics_app/widgets/styled_elevated_button.dart';
 import 'package:intl/intl.dart';
 
-class TransactionStatusCard extends StatefulWidget {
+class TransactionStatusCard extends StatelessWidget {
   final TransactionModel transaction;
-  final void Function(String value)? onPaymentStatusChanged;
+  // Callback onPaymentStatusChanged DIHAPUS karena sudah tidak dipakai di card ini
   final VoidCallback? onAssign;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -15,30 +13,10 @@ class TransactionStatusCard extends StatefulWidget {
   const TransactionStatusCard({
     super.key,
     required this.transaction,
-    this.onPaymentStatusChanged,
     this.onAssign,
     this.onEdit,
     this.onDelete,
   });
-
-  @override
-  State<TransactionStatusCard> createState() => _TransactionStatusCardState();
-}
-
-class _TransactionStatusCardState extends State<TransactionStatusCard> {
-  
-  String? _selectedPaymentStatus;
-  final List<String> _paymentStatuses = [
-    'Lunas',
-    'Belum Lunas',
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    // Inisialisasi state awal
-    _selectedPaymentStatus = widget.transaction.isPaid ? _paymentStatuses[0] : _paymentStatuses[1];
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +24,7 @@ class _TransactionStatusCardState extends State<TransactionStatusCard> {
       color: AppColors.primary,
       child: Container(
         width: double.infinity,
-        padding: EdgeInsets.all(15), 
+        padding: const EdgeInsets.all(15), 
         child: Column(
           children: [
             Row(
@@ -54,7 +32,7 @@ class _TransactionStatusCardState extends State<TransactionStatusCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Nama Penerima:',
+                  'Nama Pelanggan:',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -63,7 +41,7 @@ class _TransactionStatusCardState extends State<TransactionStatusCard> {
                 ),
                 Flexible(
                   child: Text(
-                    widget.transaction.customerName,
+                    transaction.customerName,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 20,
@@ -76,13 +54,13 @@ class _TransactionStatusCardState extends State<TransactionStatusCard> {
                 )
               ],
             ),
-            Divider(),
+            const Divider(),
 
             // Jenis dan Kuantitas Sayur
             Padding(
-              padding: EdgeInsets.symmetric(vertical: 15),
+              padding: const EdgeInsets.symmetric(vertical: 15),
               child: Column(
-                children: widget.transaction.plantQuantity.map((plantQty) {
+                children: transaction.plantQuantity.map((plantQty) {
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,7 +75,7 @@ class _TransactionStatusCardState extends State<TransactionStatusCard> {
                       ),
                       Flexible(
                         child: Text(
-                          '${plantQty.quantity} pcs x ${NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', ).format(plantQty.plant.price)}', 
+                          '${plantQty.quantity} pcs x ${NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(plantQty.plant.price)}', 
                           style: const TextStyle(color: Colors.white),
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.end,
@@ -112,34 +90,78 @@ class _TransactionStatusCardState extends State<TransactionStatusCard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Total Harga:', style: TextStyle(color: Colors.white),),
+                const Text('Total Harga:', style: TextStyle(color: Colors.white),),
                 Text(
-                  // 'Rp ${widget.transaction.totalPrice.toStringAsFixed(0)}', 
                   NumberFormat.currency(
                     locale: 'id_ID', 
-                    symbol: 'Rp ', ).format(widget.transaction.totalPrice
-                  ),
-                  style: TextStyle(color: Colors.white),
+                    symbol: 'Rp ', 
+                    decimalDigits: 0
+                  ).format(transaction.totalPrice),
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                 )
               ],
             ),
 
             Padding(
-              padding: EdgeInsets.symmetric(vertical: 15),
+              padding: const EdgeInsets.symmetric(vertical: 15),
               child: Column(
                 children: [
+                  // Status Panen
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Status Panen', style: TextStyle(color: Colors.white),),
-                      Text((widget.transaction.isHarvest) ? 'Sudah' : 'Belum', style: TextStyle(color: Colors.white),)
+                      const Text('Status Panen', style: TextStyle(color: Colors.white),),
+                      // Text((transaction.isHarvest) ? 'Sudah' : 'Belum', style: const TextStyle(color: Colors.white),),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: transaction.isHarvest ? Colors.green.shade600 : Colors.red.shade600,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          transaction.isHarvest ? 'Selesai' : 'Belum Dipanen',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
                     ],
                   ),
+                  const SizedBox(height: 5),
+                  // Status Pengiriman
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Status Pengiriman', style: TextStyle(color: Colors.white),),
-                      Text((widget.transaction.isDeliver) ? 'Sudah' : 'Belum', style: TextStyle(color: Colors.white),)
+                      const Text('Status Pengiriman', style: TextStyle(color: Colors.white),),
+                      // Text((transaction.isDeliver) ? 'Sudah' : 'Belum', style: const TextStyle(color: Colors.white),),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: transaction.isDeliver ? Colors.green.shade600 : Colors.red.shade600,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          transaction.isDeliver ? 'Selesai' : 'Belum Dikirim',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  // REVISI: Status Pembayaran (Tampilan Biasa)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Status Pembayaran', style: TextStyle(color: Colors.white),),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: transaction.isPaid ? Colors.green.shade600 : Colors.red.shade600,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          transaction.isPaid ? 'Lunas' : 'Belum Lunas',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -147,58 +169,29 @@ class _TransactionStatusCardState extends State<TransactionStatusCard> {
             ),
 
             Padding(
-              padding: EdgeInsets.symmetric(vertical: 15),
+              padding: const EdgeInsets.only(bottom: 15),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(widget.transaction.date, style: TextStyle(color: Colors.white),),
-                  Text(widget.transaction.time, style: TextStyle(color: Colors.white),)
+                  Text(transaction.date, style: const TextStyle(color: Colors.white),),
+                  Text(transaction.time, style: const TextStyle(color: Colors.white),)
                 ],
               ),
             ),
 
             Text(
-              widget.transaction.address, 
-              style: TextStyle(color: Colors.white), 
+              transaction.address, 
+              style: const TextStyle(color: Colors.white), 
               textAlign: TextAlign.justify,
             ),
-            SizedBox(height: 15,),
+            const SizedBox(height: 15,),
 
-            StyledDropdownButtonFormField(
-              hintText: 'Pilih Status Pembayaran', 
-              prefixIcon: Icons.payment,
-              value: _selectedPaymentStatus, 
-              items: _paymentStatuses.map((String status) {
-                return DropdownMenuItem<String>(
-                  value: status,
-                  child: Text(status),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                if (newValue == null) return;
-                setState(() {
-                  _selectedPaymentStatus = newValue;
-                });
-                widget.onPaymentStatusChanged?.call(newValue);
-              },
-              validator: (value) {
-                if (value == null) {
-                  return 'Silakan pilih status pembayaran';
-                }
-                return null;
-              },
-            ),
-            SizedBox(height: 15,),
-
-            // Tombol Tugaskan dihapus karena transaksi otomatis muncul ke petani
-            // Staf logistik hanya menugaskan kurir setelah petani selesai panen
-            SizedBox(height: 10,),
-
+            // Tombol Aksi (Edit & Delete)
             Row(
               children: <Widget>[
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: widget.onEdit, 
+                    onPressed: onEdit, 
                     style: ElevatedButton.styleFrom(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(5)
@@ -206,17 +199,17 @@ class _TransactionStatusCardState extends State<TransactionStatusCard> {
                       foregroundColor: Colors.black,
                       backgroundColor: Colors.yellow[700]
                     ),
-                    child: Padding(
+                    child: const Padding(
                       padding: EdgeInsets.all(10),
                       child: Text('Edit'),
                     )
                   ),
                 ),
-                SizedBox(width: 5,),
+                const SizedBox(width: 5,),
                 
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: widget.onDelete, 
+                    onPressed: onDelete, 
                     style: ElevatedButton.styleFrom(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(5)
@@ -224,7 +217,7 @@ class _TransactionStatusCardState extends State<TransactionStatusCard> {
                       foregroundColor: Colors.white,
                       backgroundColor: Colors.red
                     ),
-                    child: Padding(
+                    child: const Padding(
                       padding: EdgeInsets.all(10),
                       child: Text('Delete'),
                     )

@@ -46,6 +46,7 @@ class _LogisticDeliveryStatusScreenState extends State<LogisticDeliveryStatusScr
             return ListView.separated(
               itemCount: shipDocs.length,
               itemBuilder: (context, index) {
+                print('list logistik ke-$index');
                 final shipDoc = shipDocs[index];
                 final shipData = shipDoc.data();
                 final transaksiId =

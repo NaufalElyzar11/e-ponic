@@ -26,6 +26,9 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
     // MENERIMA ID DATA TANAM (BATCH)
     final String tanamId = args['tanam_id'] ?? '';
     
+    // MENERIMA ID DOKUMEN (KUNCI UTAMA)
+    final String docId = args['doc_id'] ?? '';
+
     // Field ini menjadi kunci untuk menentukan jenis perawatan
     final String field = args['field'];
     final DateTime tanggal = args['tanggal'];
@@ -282,7 +285,7 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
                   : StyledElevatedButton(
                       text: 'Tandai Selesai',
                       onPressed: () => _markAsDone(
-                          idPetani, idTanaman, field, tanggal, tanamId),
+                          docId, idPetani, idTanaman, field, tanggal, tanamId),
                       backgroundColor: const Color.fromARGB(255, 1, 68, 33),
                       foregroundColor: Colors.white,
                     ),
@@ -293,20 +296,21 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
     );
   }
 
-  Future<void> _markAsDone(String idPetani, String idTanaman, String field,
+  Future<void> _markAsDone(String docId, String idPetani, String idTanaman, String field,
       DateTime tanggal, String tanamId) async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final dateKey = DateFormat('yyyy-MM-dd').format(tanggal);
-      
-      final docId = '${idPetani}_${idTanaman}_${tanamId}_${field}_$dateKey';
+      // VALIDASI PENTING: Pastikan docId tidak kosong
+      if (docId.isEmpty) {
+        throw Exception("ID Dokumen tidak valid. Tidak bisa menyimpan status.");
+      }
 
       await FirebaseFirestore.instance
           .collection('jadwal_perawatan')
-          .doc(docId)
+          .doc(docId) // Gunakan ID yang dikirim dari Home Screen
           .set({
         'id_petani': idPetani,
         'id_tanaman': idTanaman,
