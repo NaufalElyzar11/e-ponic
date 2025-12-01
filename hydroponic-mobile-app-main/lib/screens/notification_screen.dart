@@ -91,7 +91,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
           return RefreshIndicator(
             onRefresh: () async {
-              // Trigger rebuild dengan menunggu sedikit
               await Future.delayed(const Duration(milliseconds: 500));
             },
             child: ListView.builder(

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-// Import package pdf dan printing
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:intl/intl.dart'; // Untuk format tanggal
-
+import 'package:intl/intl.dart';
 import 'package:hydroponics_app/models/user_model.dart';
 import 'package:hydroponics_app/theme/app_colors.dart';
 import 'package:hydroponics_app/widgets/employee_list_card.dart';
@@ -112,7 +110,6 @@ class _EmployeeAccountListScreenState extends State<EmployeeAccountListScreen> {
                     }
 
                     return Column(
-                      // spacing: 7, // Perhatikan: properti spacing mungkin tidak ada di Column versi Flutter lama, gunakan SizedBox jika error
                       children: [
                         EmployeeListCard(
                           role: 'Petani',
@@ -225,9 +222,6 @@ class _EmployeeAccountListScreenState extends State<EmployeeAccountListScreen> {
       // 2. Buat Dokumen PDF
       final pdf = pw.Document();
       
-      // Load font (opsional, default font biasanya aman)
-      // final font = await PdfGoogleFonts.nunitoExtraLight();
-
       // Tanggal laporan dibuat
       final String dateNow = DateFormat('dd MMMM yyyy, HH:mm').format(DateTime.now());
 
@@ -242,15 +236,9 @@ class _EmployeeAccountListScreenState extends State<EmployeeAccountListScreen> {
       for (var doc in docs) {
         final data = doc.data();
         
-        // Jika petani, ambil nama tanaman dari koleksi 'tanaman' (opsional, butuh fetch tambahan)
-        // Untuk performa cepat, kita tampilkan ID atau string kosong dulu, 
-        // atau fetch nama tanaman secara paralel jika perlu. 
-        // Di sini kita ambil ID Tanaman saja atau logic sederhana.
         String infoTanaman = 'Tidak ada';
         if (data['posisi'] == 'Petani' && data['id_tanaman'] != null) {
-           // Untuk laporan cepat, kita tulis "Ada ID Tanaman" atau fetch namanya
-           // Kita biarkan ID-nya atau label generic agar tidak terlalu lama loading
-           infoTanaman = 'Terhubung'; 
+          infoTanaman = 'Terhubung'; 
         }
 
         tableData.add([
@@ -289,13 +277,13 @@ class _EmployeeAccountListScreenState extends State<EmployeeAccountListScreen> {
                 data: tableData,
                 border: null,
                 headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-                headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF014421)), // Warna Hijau AppColors.primary
+                headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF014421)),
                 rowDecoration: const pw.BoxDecoration(
                   border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5)),
                 ),
                 cellAlignment: pw.Alignment.centerLeft,
                 cellAlignments: {
-                  0: pw.Alignment.center, // No rata tengah
+                  0: pw.Alignment.center,
                 },
                 headerHeight: 30,
                 cellHeight: 30,

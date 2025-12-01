@@ -133,7 +133,7 @@ class _FarmerHistoryScreenState extends State<FarmerHistoryScreen> {
                         _handleEditHarvest(panenDocsCopy);
                       },
 
-                      // --- DELETE PER KATEGORI (CERDAS) ---
+                      // --- DELETE PER KATEGORI ---
                       onDeletePlant: () {
                         _handleDeleteDocs(
                           docs: tanamDocsCopy,
@@ -233,13 +233,13 @@ class _FarmerHistoryScreenState extends State<FarmerHistoryScreen> {
     await batch.commit();
     
     if(mounted) {
-       ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Data berhasil dihapus')),
       );
     }
   }
 
-  /// Logika hapus cerdas: Konfirmasi langsung jika 1 data, Pilih list jika > 1 data
+  /// Konfirmasi langsung jika 1 data, Pilih list jika > 1 data
   Future<void> _handleDeleteDocs({
     required List<Map<String, dynamic>> docs,
     required String collectionName,
@@ -299,10 +299,8 @@ class _FarmerHistoryScreenState extends State<FarmerHistoryScreen> {
                 title: Text('$qty $unit'),
                 subtitle: Text('Jam Input: $date'),
                 onTap: () {
-                  // Tutup dialog list dulu
                   Navigator.pop(ctx);
                   
-                  // Tampilkan konfirmasi untuk item spesifik ini
                   showDialog(
                     context: context,
                     builder: (confirmCtx) => AlertDialog(

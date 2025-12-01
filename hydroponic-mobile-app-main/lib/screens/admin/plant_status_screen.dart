@@ -491,8 +491,8 @@ class _PlantStatusScreenState extends State<PlantStatusScreen> {
         
         String plantName = 'Panen (Umum)';
         if (idPetani != null && farmerToPlant.containsKey(idPetani)) {
-           final pid = farmerToPlant[idPetani];
-           plantName = plantNames[pid] ?? 'Tanaman tidak diketahui';
+          final pid = farmerToPlant[idPetani];
+          plantName = plantNames[pid] ?? 'Tanaman tidak diketahui';
         }
 
         if (ts != null) {

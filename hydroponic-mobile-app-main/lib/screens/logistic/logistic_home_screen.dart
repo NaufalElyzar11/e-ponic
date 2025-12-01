@@ -10,7 +10,6 @@ import 'package:hydroponics_app/models/transaction_model.dart';
 import 'package:hydroponics_app/models/user_model.dart';
 import 'package:hydroponics_app/widgets/delivery_assignment_card.dart';
 import 'package:hydroponics_app/widgets/home_app_bar.dart';
-// Import NotificationService
 import 'package:hydroponics_app/services/notification_service.dart';
 
 class LogisticHomeScreen extends StatefulWidget {
@@ -25,7 +24,6 @@ class _LogisticHomeScreenState extends State<LogisticHomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Start listening to notifications when screen opens
     NotificationService.instance.initialize().then((_) {
       NotificationService.instance.startListening();
     });
@@ -33,7 +31,6 @@ class _LogisticHomeScreenState extends State<LogisticHomeScreen> {
 
   @override
   void dispose() {
-    // Stop listening when screen closes
     NotificationService.instance.stopListening();
     super.dispose();
   }
@@ -139,7 +136,6 @@ class _LogisticHomeScreenState extends State<LogisticHomeScreen> {
                               ? DateFormat('dd MMM yyyy').format(dt)
                               : '';
                           
-                          // Gunakan createdAt untuk jam jika ada, fallback ke tanggal
                           final timeStr = createdAt != null 
                               ? DateFormat('HH:mm').format(createdAt) 
                               : (dt != null ? DateFormat('HH:mm').format(dt) : '');

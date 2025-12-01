@@ -1,13 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:hydroponics_app/screens/admin/add_edit_transaction_screen.dart';
 import 'package:hydroponics_app/screens/admin/admin_navigation.dart';
-import 'package:hydroponics_app/screens/admin/edit_account_screen.dart';
 import 'package:hydroponics_app/screens/admin/employee_account_list_screen.dart';
 import 'package:hydroponics_app/screens/admin/plant_status_screen.dart';
 import 'package:hydroponics_app/screens/admin/transaction_status_screen.dart';
@@ -41,12 +39,9 @@ Future<void> main() async {
   await AlarmService.instance.initialize();
   await NotificationService.instance.initialize(); 
   
-  // --- INI UNTUK APP SAAT DIBUKA (FOREGROUND) ---
   NotificationService.instance.startListening(); 
 
-  // --- INI UNTUK BACKGROUND SERVICE (SAAT DITUTUP) ---
   await BackgroundServiceHelper.initializeService(); 
-  // --------------------------------------------------
 
   runApp(const HydroponicApp());
 }
@@ -103,7 +98,6 @@ class _AlarmWrapperState extends State<_AlarmWrapper> {
   @override
   void initState() {
     super.initState();
-    // Listen to alarm stream
     Alarm.ringStream.stream.listen((alarmSettings) {
       if (mounted) {
         setState(() {
@@ -112,10 +106,8 @@ class _AlarmWrapperState extends State<_AlarmWrapper> {
       }
     });
 
-    // Check if any alarm is currently ringing on init
     _checkRingingAlarm();
     
-    // Polling untuk memastikan state tetap sinkron (setiap 1 detik)
     _pollingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
         _checkRingingAlarm();
@@ -134,7 +126,6 @@ class _AlarmWrapperState extends State<_AlarmWrapper> {
     
     final isRinging = await Alarm.isRinging();
     if (isRinging) {
-      // Get the ringing alarm
       final alarms = await Alarm.getAlarms();
       for (final alarm in alarms) {
         final ringing = await Alarm.isRinging(alarm.id);
@@ -148,7 +139,6 @@ class _AlarmWrapperState extends State<_AlarmWrapper> {
         }
       }
     } else {
-      // Tidak ada alarm yang berbunyi
       if (mounted && _currentRingingAlarm != null) {
         setState(() {
           _currentRingingAlarm = null;
@@ -320,7 +310,6 @@ class _AuthWrapper extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // Masih loading
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),

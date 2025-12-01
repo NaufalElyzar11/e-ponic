@@ -4,11 +4,9 @@ import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hydroponics_app/firebase_options.dart'; // Pastikan import ini benar
-import 'package:intl/intl.dart';
 
 class BackgroundServiceHelper {
   static Future<void> initializeService() async {
@@ -16,8 +14,8 @@ class BackgroundServiceHelper {
 
     // Notifikasi untuk menandakan service berjalan (Wajib untuk Android Foreground Service)
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'my_foreground', // id
-      'Background Service', // title
+      'my_foreground',
+      'Background Service',
       description: 'Menjalankan pemantauan data di latar belakang',
       importance: Importance.low, 
     );
@@ -32,7 +30,7 @@ class BackgroundServiceHelper {
 
     await service.configure(
       androidConfiguration: AndroidConfiguration(
-        onStart: onStart, // Fungsi utama yang akan dijalankan
+        onStart: onStart,
         autoStart: true,
         isForegroundMode: true,
         notificationChannelId: 'my_foreground',
@@ -50,7 +48,6 @@ class BackgroundServiceHelper {
 
   @pragma('vm:entry-point')
   static Future<bool> onIosBackground(ServiceInstance service) async {
-    // iOS memiliki batasan ketat, biasanya butuh 'Background Fetch' atau Push Notification
     return true;
   }
 
@@ -139,7 +136,7 @@ class BackgroundServiceHelper {
         
         // Update lastCheck agar kejadian yang sama tidak notif lagi di loop berikutnya
         if (updatedAt != null && updatedAt.isAfter(lastCheck)) {
-           lastCheck = updatedAt;
+          lastCheck = updatedAt;
         }
       }
     });
@@ -161,11 +158,11 @@ class BackgroundServiceHelper {
 
         // Cek apakah ada item milik petani ini
         if (items.any((i) => i['id_tanaman'] == plantId)) {
-           if (createdAt != null && createdAt.isAfter(lastCheck)) {
-             _showNotification(localNotif, doc.id.hashCode, 'Tugas Panen Baru', 
-               'Ada pesanan baru yang perlu dipanen.');
-             lastCheck = createdAt;
-           }
+          if (createdAt != null && createdAt.isAfter(lastCheck)) {
+            _showNotification(localNotif, doc.id.hashCode, 'Tugas Panen Baru', 
+              'Ada pesanan baru yang perlu dipanen.');
+            lastCheck = createdAt;
+          }
         }
       }
     });
@@ -181,16 +178,16 @@ class BackgroundServiceHelper {
         .limit(5)
         .snapshots()
         .listen((snapshot) {
-       for (var doc in snapshot.docs) {
-         final data = doc.data();
-         final createdAt = (data['created_at'] as Timestamp?)?.toDate();
-         
-         if (createdAt != null && createdAt.isAfter(lastCheck)) {
-            _showNotification(localNotif, doc.id.hashCode, 'Tugas Pengiriman', 
-               'Anda mendapatkan tugas pengiriman baru.');
-            lastCheck = createdAt;
-         }
-       }
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final createdAt = (data['created_at'] as Timestamp?)?.toDate();
+        
+        if (createdAt != null && createdAt.isAfter(lastCheck)) {
+          _showNotification(localNotif, doc.id.hashCode, 'Tugas Pengiriman', 
+            'Anda mendapatkan tugas pengiriman baru.');
+          lastCheck = createdAt;
+        }
+      }
     });
   }
 

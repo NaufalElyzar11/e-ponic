@@ -5,13 +5,13 @@ import 'package:intl/intl.dart';
 class StyledDatePickerField extends StatefulWidget {
   final TextEditingController? controller;
   final ValueChanged<DateTime?>? onDateSelected;
-  final DateTime? lastDate; // Parameter baru untuk batas akhir tanggal
+  final DateTime? lastDate;
 
   const StyledDatePickerField({
     super.key,
     this.controller,
     this.onDateSelected,
-    this.lastDate, // Tambahkan ke constructor
+    this.lastDate,
   });
 
   @override
@@ -29,11 +29,8 @@ class _StyledDatePickerFieldState extends State<StyledDatePickerField> {
 
   Future<void> _selectDate(BuildContext context) async {
     final now = DateTime.now();
-    // Gunakan widget.lastDate jika ada, jika tidak gunakan default 2101
     final effectiveLastDate = widget.lastDate ?? DateTime(2101);
 
-    // Pastikan initialDate tidak melebihi lastDate untuk mencegah error
-    // Jika 'sekarang' lebih besar dari batas akhir, gunakan batas akhir sebagai awal
     DateTime initialDate = now;
     if (initialDate.isAfter(effectiveLastDate)) {
       initialDate = effectiveLastDate;
@@ -43,7 +40,7 @@ class _StyledDatePickerFieldState extends State<StyledDatePickerField> {
       context: context,
       initialDate: initialDate, 
       firstDate: DateTime(2000),   
-      lastDate: effectiveLastDate, // Gunakan batas akhir yang dinamis
+      lastDate: effectiveLastDate,
     );
 
     if (picked != null) {
@@ -77,7 +74,7 @@ class _StyledDatePickerFieldState extends State<StyledDatePickerField> {
         }
         return null;
       },
-      decoration: const InputDecoration( // Saya tambahkan const untuk optimasi
+      decoration: const InputDecoration(
         hintText: 'Pilih tanggal',
         filled: true,
         fillColor: Color.fromARGB(255, 236, 236, 236),

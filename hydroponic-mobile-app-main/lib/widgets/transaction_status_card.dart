@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 
 class TransactionStatusCard extends StatelessWidget {
   final TransactionModel transaction;
-  // Callback onPaymentStatusChanged DIHAPUS karena sudah tidak dipakai di card ini
   final VoidCallback? onAssign;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -111,7 +110,6 @@ class TransactionStatusCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Status Panen', style: TextStyle(color: Colors.white),),
-                      // Text((transaction.isHarvest) ? 'Sudah' : 'Belum', style: const TextStyle(color: Colors.white),),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
@@ -131,7 +129,6 @@ class TransactionStatusCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Status Pengiriman', style: TextStyle(color: Colors.white),),
-                      // Text((transaction.isDeliver) ? 'Sudah' : 'Belum', style: const TextStyle(color: Colors.white),),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
@@ -146,7 +143,6 @@ class TransactionStatusCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 5),
-                  // REVISI: Status Pembayaran (Tampilan Biasa)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [

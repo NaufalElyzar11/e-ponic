@@ -90,25 +90,6 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
     }
   }
 
-  Future<void> _loadPlants() async {
-    setState(() {
-      _isLoadingPlants = true;
-    });
-    try {
-      final snapshot =
-          await FirebaseFirestore.instance.collection('tanaman').get();
-      setState(() {
-        _plants = snapshot.docs;
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingPlants = false;
-        });
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {

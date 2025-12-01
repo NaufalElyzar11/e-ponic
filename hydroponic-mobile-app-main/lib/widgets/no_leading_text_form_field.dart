@@ -48,7 +48,7 @@ class NoLeadingTextFormField extends StatelessWidget{
             width: 2.0
           )
         ),
-        counterText: '', // Sembunyikan counter jika maxLength digunakan
+        counterText: '',
       ),
     );
   }

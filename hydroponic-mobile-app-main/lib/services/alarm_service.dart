@@ -1,8 +1,8 @@
+// ignore_for_file: avoid_print
+
 import 'package:alarm/alarm.dart';
 import 'package:flutter/foundation.dart';
 
-/// Service untuk mengelola alarm/notifikasi jadwal petani menggunakan package `alarm`
-/// agar berfungsi seperti alarm jam native (berdering terus & fullscreen).
 class AlarmService {
   AlarmService._();
 
@@ -33,7 +33,7 @@ class AlarmService {
     final alarmSettings = AlarmSettings(
       id: id,
       dateTime: dateTime,
-      assetAudioPath: 'assets/audio/alarm.mp3', // Pastikan file ini ada
+      assetAudioPath: 'assets/audio/alarm.mp3', // file audio
       loopAudio: true,
       vibrate: true,
       fadeDuration: 3.0,
@@ -54,10 +54,6 @@ class AlarmService {
     }
   }
 
-  /// Schedule SATU alarm harian yang berisi rangkuman semua jadwal
-  /// 
-  /// [body] - String gabungan semua tugas (misal: "1. Cek Air\n2. Cek Tanaman")
-  /// [isTestMode] - Jika true, alarm akan bunyi 10 detik dari sekarang
   Future<void> scheduleDailySummaryAlarm({
     required String body,
     bool isTestMode = false,
@@ -88,7 +84,6 @@ class AlarmService {
       );
 
       // Jika jam 09:00 sudah lewat hari ini, kita tidak perlu membunyikan alarm lagi
-      // (Atau bisa diubah logicnya untuk set besok, tapi requirementnya adalah jadwal "Hari Ini")
       if (alarmTime.isBefore(now)) {
         debugPrint('⏰ Waktu alarm harian (09:00) sudah lewat untuk hari ini.');
         return;

@@ -118,18 +118,15 @@ class _LogisticDeliveryStatusScreenState extends State<LogisticDeliveryStatusScr
       );
     }).toList();
 
-    // --- PERBAIKAN DI SINI ---
     final dt = (txData['tanggal'] as Timestamp?)?.toDate();
-    final createdAt = (txData['created_at'] as Timestamp?)?.toDate(); // Ambil created_at
+    final createdAt = (txData['created_at'] as Timestamp?)?.toDate();
 
     final dateStr =
         dt != null ? DateFormat('dd MMM yyyy').format(dt) : '';
     
-    // Gunakan createdAt untuk jam
     final timeStr = createdAt != null 
         ? DateFormat('HH:mm').format(createdAt) 
         : (dt != null ? DateFormat('HH:mm').format(dt) : '');
-    // -------------------------
     
     final tx = TransactionModel(
       id: transaksiId,
@@ -144,7 +141,6 @@ class _LogisticDeliveryStatusScreenState extends State<LogisticDeliveryStatusScr
       isDeliver: (txData['is_deliver'] ?? false) as bool,
     );
 
-    // Jika courierId kosong, tampilkan "-"
     String namaKurir = '-';
     if (courierId.isNotEmpty) {
       final courierSnap = await FirebaseFirestore.instance

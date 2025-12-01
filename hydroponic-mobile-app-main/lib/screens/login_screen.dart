@@ -8,7 +8,6 @@ import 'package:hydroponics_app/widgets/styled_elevated_button.dart';
 import 'package:hydroponics_app/widgets/styled_text_form_field.dart';
 import 'package:hydroponics_app/widgets/log_reg_header.dart';
 import 'package:hydroponics_app/services/auth_service.dart';
-// Tambahkan import ini
 import 'package:hydroponics_app/services/notification_service.dart'; 
 
 class LoginScreen extends StatefulWidget {
@@ -142,13 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
         throw Exception('Login gagal.');
       }
 
-      // --- PERBAIKAN: Restart Notifikasi Service ---
-      // Ini penting agar NotificationService mendeteksi ulang Role user yang baru login
-      // dan mulai mendengarkan stream yang sesuai (misal: stream khusus Admin).
       NotificationService.instance.startListening();
-      // ---------------------------------------------
-
-      // Ambil data pengguna dari Firestore untuk menentukan role dan routing
       final doc = await FirebaseFirestore.instance
           .collection('pengguna')
           .doc(user.uid)

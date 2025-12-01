@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-// import 'package:intl/intl.dart'; // Hapus atau comment baris ini jika tidak dipakai di file ini
 
 class PlantHarvestHistoryExpansion extends StatelessWidget {
-  final String date; // Ini menerima String yang SUDAH diformat dari parent
+  final String date;
   final int seladaPlantQty;
   final int seladaHarvestQty;
   final int pakcoyPlantQty;
@@ -25,9 +24,6 @@ class PlantHarvestHistoryExpansion extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
-    // HAPUS BARIS INI:
-    // final formattedDate = DateFormat('dd MMMM yyyy', 'id_ID').format(date);
-
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 8.0),
       clipBehavior: Clip.antiAlias,
@@ -38,7 +34,6 @@ class PlantHarvestHistoryExpansion extends StatelessWidget {
         backgroundColor: const Color.fromARGB(255, 226, 226, 226),
         childrenPadding: const EdgeInsets.only(bottom: 15, right: 15, left: 15),
         
-        // Gunakan 'date' langsung karena sudah berisi string "19 November 2025"
         title: Text(
           date, 
           style: const TextStyle(fontWeight: FontWeight.bold),

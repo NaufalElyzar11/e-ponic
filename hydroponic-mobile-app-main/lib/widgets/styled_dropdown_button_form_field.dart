@@ -1,5 +1,3 @@
-// lib/widgets/styled_dropdown_button_form_field.dart
-
 import 'package:flutter/material.dart';
 import 'package:hydroponics_app/theme/app_colors.dart';
 

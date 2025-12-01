@@ -1,3 +1,5 @@
+// ignore_for_file: invalid_use_of_protected_member
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -67,8 +69,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
 
   @override
   void dispose() {
-    // WAJIB: Hapus controller saat widget tidak dipakai
-    // untuk menghindari memory leaks
+    // Hapus controller saat widget tidak dipakai untuk menghindari memory leaks
     _seladaController.dispose();
     _pakcoyController.dispose();
     _kangkungController.dispose();
@@ -129,11 +130,10 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                       controller: _buyerNameController,
                       hintText: 'Masukkan nama pembeli', 
                       inputType: TextInputType.text,
-                      maxLength: 30, // Batasi maksimal 50 karakter
+                      maxLength: 30, // Batasi maksimal 30 karakter
                       inputFormatters: [
                         // Hanya memperbolehkan huruf, spasi, titik (.), dan dash (-)
                         FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s.\-]')),
-                        LengthLimitingTextInputFormatter(50), // Double check dengan formatter
                       ],
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -354,7 +354,7 @@ class _AddEditTransactionScreenState extends State<AddEditTransactionScreen> {
                         child: Padding(
                           padding: EdgeInsetsGeometry.all(10),
                           child: Text(
-                            // --- PERUBAHAN DI SINI: Format Currency ---
+                            // --- Format Currency ---
                             NumberFormat.currency(
                               locale: 'id_ID', 
                               symbol: 'Rp ', 
@@ -417,7 +417,7 @@ extension on String {
 }
 
 extension _AddEditTransactionScreenLogic on _AddEditTransactionScreenState {
-  // --- FUNGSI BARU: Load Stok Siap Panen ---
+  // --- Load Stok Siap Panen ---
   Future<void> _loadReadyStocks() async {
     try {
       final snapshot = await FirebaseFirestore.instance.collection('tanaman').get();
@@ -670,7 +670,7 @@ extension _AddEditTransactionScreenLogic on _AddEditTransactionScreenState {
       );
     }
 
-    // --- 3.5 VALIDASI STOK DAN BATAS MAKSIMUM (Bagian Baru) ---
+    // --- 3.5 VALIDASI STOK DAN BATAS MAKSIMUM ---
     String stockErrorMessage = '';
     const int maxQuantity = 999999; // Batas maksimum input
     
@@ -722,9 +722,8 @@ extension _AddEditTransactionScreenLogic on _AddEditTransactionScreenState {
           ],
         ),
       );
-      return; // Stop proses submit
+      return;
     }
-    // --- AKHIR VALIDASI STOK ---
 
     // 4. Cek apakah semua validasi lolos
     if (!(isFormValid &&
@@ -783,7 +782,7 @@ extension _AddEditTransactionScreenLogic on _AddEditTransactionScreenState {
       }
 
       if (widget.transactionId != null) {
-        // Update existing transaction
+        // Update transaksi
         await TransactionService.instance.updateTransactionWithDetails(
           transactionId: widget.transactionId!,
           namaPelanggan: _buyerNameController.text.trim(),
@@ -799,7 +798,7 @@ extension _AddEditTransactionScreenLogic on _AddEditTransactionScreenState {
           const SnackBar(content: Text('Transaksi berhasil diupdate')),
         );
       } else {
-        // Create new transaction
+        // Buat transkasi baru
         await TransactionService.instance.createTransactionWithDetails(
           namaPelanggan: _buyerNameController.text.trim(),
           alamat: _buyerAddressController.text.trim(),

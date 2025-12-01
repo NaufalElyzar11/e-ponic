@@ -108,10 +108,8 @@ class _AddPlantDataScreenState extends State<AddPlantDataScreen>{
               ),
               _gap(10),
               
-              // PERUBAHAN DI SINI
               StyledDatePickerField(
                 controller: _dateController,
-                // Batasi tanggal terakhir ke Waktu Sekarang (Hari Ini)
                 lastDate: DateTime.now(), 
                 onDateSelected: (date) {
                   _selectedDate = date;

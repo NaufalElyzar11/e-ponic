@@ -53,10 +53,10 @@ class _StateLogisticNavigation extends State<LogisticNavigation> {
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
           ],
 
-          type: BottomNavigationBarType.fixed, // Memaksa agar tetap tipe fixed
+          type: BottomNavigationBarType.fixed,
 
-          selectedItemColor: AppColors.primary, // Warna item aktif
-          unselectedItemColor: Colors.grey, // Warna item tidak aktif
+          selectedItemColor: AppColors.primary,
+          unselectedItemColor: Colors.grey,
           backgroundColor: const Color.fromARGB(255, 231, 255, 237),
 
           currentIndex: _selectedIndex,

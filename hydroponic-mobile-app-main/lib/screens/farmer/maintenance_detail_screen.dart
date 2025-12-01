@@ -171,7 +171,6 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
               ),
             ),
             
-            // --- BAGIAN BARU: MENAMPILKAN INTERVAL SESUAI JENIS PERAWATAN ---
             const SizedBox(height: 15),
             FutureBuilder<DocumentSnapshot>(
               future: FirebaseFirestore.instance
@@ -185,7 +184,6 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
 
                 final plantData = snapshot.data!.data() as Map<String, dynamic>;
                 
-                // Menentukan nama kolom berdasarkan 'field' atau 'title'
                 String intervalColumn = '';
                 
                 // Logika pemetaan field ke nama kolom database
@@ -247,7 +245,6 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
                 );
               },
             ),
-            // --- AKHIR BAGIAN BARU ---
 
             const SizedBox(height: 40),
 
@@ -303,7 +300,7 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
     });
 
     try {
-      // VALIDASI PENTING: Pastikan docId tidak kosong
+      // Pastikan docId tidak kosong
       if (docId.isEmpty) {
         throw Exception("ID Dokumen tidak valid. Tidak bisa menyimpan status.");
       }

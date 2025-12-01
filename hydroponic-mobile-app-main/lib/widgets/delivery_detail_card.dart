@@ -30,7 +30,7 @@ class DeliveryDetailCard extends StatelessWidget {
         final statusPengiriman = (shippingData?['status_pengiriman'] ?? 'Belum Dikirim') as String;
         final catatan = (shippingData?['catatan_pengiriman'] ?? '') as String;
         final isSelesai = statusPengiriman.toLowerCase().contains('selesai') ||
-                         statusPengiriman.toLowerCase().contains('terkirim');
+                          statusPengiriman.toLowerCase().contains('terkirim');
 
         return _buildCard(context, statusPengiriman, catatan, isSelesai);
       },

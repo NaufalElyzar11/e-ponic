@@ -9,9 +9,8 @@ import 'package:hydroponics_app/models/transaction_model.dart';
 import 'package:hydroponics_app/models/user_model.dart';
 import 'package:hydroponics_app/widgets/delivery_assignment_card.dart';
 import 'package:hydroponics_app/widgets/home_app_bar.dart';
-import 'package:hydroponics_app/services/auth_service.dart';
 import 'package:hydroponics_app/services/shipping_service.dart';
-import 'package:hydroponics_app/services/notification_service.dart'; // Tambahkan import ini
+import 'package:hydroponics_app/services/notification_service.dart';
 
 class CourierHomeScreen extends StatefulWidget {
   const CourierHomeScreen({super.key});
@@ -85,17 +84,6 @@ class _CourierHomeScreenState extends State<CourierHomeScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  // ElevatedButton.icon(
-                  //   onPressed: () async {
-                  //     // 1. Panggil fungsi test
-                  //     await NotificationService.instance.testNotification(
-                  //       title: 'Test Kurir',
-                  //       body: 'Halo, ini tes notifikasi lokal!',
-                  //     );
-                  //   },
-                  //   icon: const Icon(Icons.notifications_active),
-                  //   label: const Text('Cek Notifikasi'),
-                  // ),
                   const SizedBox(height: 25),
                   StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                     stream: ShippingService.instance.courierAssignmentsStream(authUser.uid),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hydroponics_app/models/delivery_assigntment_model.dart';
 import 'package:hydroponics_app/theme/app_colors.dart';
-import 'package:hydroponics_app/widgets/styled_elevated_button.dart';
 
 class LogisticDeliveryStatusCard extends StatefulWidget {
   final DeliveryAssigntmentModel assignment;

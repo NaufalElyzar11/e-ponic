@@ -27,10 +27,7 @@ class TransactionModel {
 
   double get totalPrice {
     // Menggunakan fold untuk menjumlahkan total harga dari setiap item di list
-    // 0.0 adalah nilai awal (initial sum)
     return plantQuantity.fold(0.0, (sum, item) {
-      // 'sum' adalah total sementara
-      // 'item' adalah setiap PlantQuantityModel dalam list
       double itemTotal = item.plant.price * item.quantity;
       return sum + itemTotal;
     });

@@ -1,6 +1,7 @@
+// ignore_for_file: avoid_print
+
 import 'dart:async';
 import 'dart:io'; 
-import 'package:async/async.dart'; 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -224,10 +225,10 @@ class NotificationService {
             
             String namaPelanggan = 'Pelanggan';
             if (transaksiId.isNotEmpty) {
-               try {
-                 final txDoc = await _db.collection('transaksi').doc(transaksiId).get();
-                 if (txDoc.exists) namaPelanggan = (txDoc.data()?['nama_pelanggan'] ?? 'Pelanggan') as String;
-               } catch (_) {}
+              try {
+                final txDoc = await _db.collection('transaksi').doc(transaksiId).get();
+                if (txDoc.exists) namaPelanggan = (txDoc.data()?['nama_pelanggan'] ?? 'Pelanggan') as String;
+              } catch (_) {}
             }
 
             notifications.add(_formatNotification(
@@ -240,16 +241,16 @@ class NotificationService {
             ));
 
             if (status.toLowerCase().contains('selesai') || status.toLowerCase().contains('terkirim')) {
-               if (updatedAt != null) {
-                 notifications.add(_formatNotification(
-                    id: '${doc.id}_done',
-                    title: 'Pengiriman Selesai',
-                    body: 'Sukses mengantar ke $namaPelanggan',
-                    timestamp: updatedAt,
-                    type: 'delivery_done',
-                    referenceId: doc.id,
-                 ));
-               }
+              if (updatedAt != null) {
+                notifications.add(_formatNotification(
+                  id: '${doc.id}_done',
+                  title: 'Pengiriman Selesai',
+                  body: 'Sukses mengantar ke $namaPelanggan',
+                  timestamp: updatedAt,
+                  type: 'delivery_done',
+                  referenceId: doc.id,
+                ));
+              }
             }
           }
           notifications.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
@@ -342,7 +343,7 @@ class NotificationService {
                 id: '${doc.id}_harvest_alert',
                 title: 'Tanaman Dipanen',
                 body: 'Pesanan untuk $namaPelanggan telah selesai dipanen.',
-                timestamp: harvestedAt ?? createdAt ?? DateTime(2000), // <-- UBAH INI
+                timestamp: harvestedAt ?? createdAt ?? DateTime(2000),
                 type: 'admin_harvest',
                 referenceId: doc.id,
               ));
@@ -355,13 +356,13 @@ class NotificationService {
                 id: '${doc.id}_delivery_done',
                 title: 'Pengiriman Selesai',
                 body: 'Pesanan untuk $namaPelanggan telah berhasil dikirim.',
-                timestamp: deliveredAt ?? createdAt ?? DateTime(2000), // <-- UBAH INI
+                timestamp: deliveredAt ?? createdAt ?? DateTime(2000),
                 type: 'admin_delivery_done',
                 referenceId: doc.id,
               ));
             }
             
-            // 3. Pembayaran (Opsional, perlu tambah field paid_at di TransactionService jika mau presisi)
+            // 3. Pembayaran
             if (data['is_paid'] == true) {
                // Untuk saat ini pakai createdAt karena biasanya bayar di awal
               notifications.add(_formatNotification(
@@ -393,7 +394,6 @@ class NotificationService {
     if (now.isBefore(todayNineAM)) {
       return [];
     }
-    // ------------------------
 
     try {
       final plantDoc = await _db.collection('tanaman').doc(plantId).get();
@@ -441,7 +441,7 @@ class NotificationService {
         
         final panenDate = start.add(Duration(days: masaTanam));
         if (panenDate.year == today.year && panenDate.month == today.month && panenDate.day == today.day) {
-           notifications.add(_formatNotification(
+          notifications.add(_formatNotification(
             id: 'panen_${doc.id}', title: 'Estimasi Panen', body: 'Waktunya panen untuk batch ini!', timestamp: notificationTime, type: 'harvest_estimate'
           ));
         }
@@ -473,11 +473,11 @@ class NotificationService {
         latestValues[i] = data;
         final combined = latestValues.expand((x) => x).toList();
         if (combined.isNotEmpty && combined.first is Map && (combined.first as Map).containsKey('timestamp')) {
-           combined.sort((a, b) {
-             final tA = (a as Map)['timestamp'] as DateTime;
-             final tB = (b as Map)['timestamp'] as DateTime;
-             return tB.compareTo(tA);
-           });
+          combined.sort((a, b) {
+            final tA = (a as Map)['timestamp'] as DateTime;
+            final tB = (b as Map)['timestamp'] as DateTime;
+            return tB.compareTo(tA);
+          });
         }
         controller.add(combined);
       }, onDone: () {

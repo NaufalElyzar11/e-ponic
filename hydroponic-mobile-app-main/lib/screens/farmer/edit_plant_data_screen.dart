@@ -193,7 +193,7 @@ class _EditPlantDataScreenState extends State<EditPlantDataScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Data tanam berhasil diperbarui')),
       );
-      Navigator.pop(context, true); // Return true to indicate success
+      Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

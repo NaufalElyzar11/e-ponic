@@ -4,7 +4,7 @@ class UserModel{
   final String username;
   final String role;
   final VoidCallback onNotificationTap;
-  final String? id; // optional Firestore document ID
+  final String? id;
 
   UserModel({
     required this.username,

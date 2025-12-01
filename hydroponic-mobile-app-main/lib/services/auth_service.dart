@@ -25,7 +25,6 @@ class AuthService {
     final uid = credential.user!.uid;
     final doc = await _firestore.collection('pengguna').doc(uid).get();
     if (!doc.exists) {
-      // Jika akun Firebase ada tapi tidak terdaftar sebagai pengguna perusahaan
       await _auth.signOut();
       throw Exception(
         'Akun tidak terdaftar sebagai karyawan. '

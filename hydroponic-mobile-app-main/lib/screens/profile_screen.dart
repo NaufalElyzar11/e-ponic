@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hydroponics_app/services/alarm_service.dart';
 
 import 'package:hydroponics_app/services/auth_service.dart';
-// Tambahkan import ini
 import 'package:hydroponics_app/services/notification_service.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -96,28 +95,6 @@ class ProfileScreen extends StatelessWidget {
                     Text(roleText),
                   ],
                 )),
-            // ListTile(
-            //   leading: const Icon(
-            //     Icons.settings,
-            //     size: 25,
-            //   ),
-            //   title: const Text('Pengaturan'),
-            //   onTap: () {
-            //     // actions
-            //   },
-            // ),
-            // const Divider(),
-            // ListTile(
-            //   leading: const Icon(
-            //     Icons.headset_mic,
-            //     size: 25,
-            //   ),
-            //   title: const Text('Bantuan & dukungan'),
-            //   onTap: () {
-            //     // actions
-            //   },
-            // ),
-            // const Divider(),
             ListTile(
               textColor: Colors.red,
               iconColor: Colors.red,
@@ -127,7 +104,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               title: const Text('Keluar'),
               onTap: () async {
-                // Tampilkan dialog konfirmasi logout (Opsional)
+                // Tampilkan dialog konfirmasi logout
                 final shouldLogout = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(

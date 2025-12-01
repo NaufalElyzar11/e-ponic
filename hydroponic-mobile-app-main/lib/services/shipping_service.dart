@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Service untuk mengelola penugasan kurir & status pengiriman.
 class ShippingService {
   ShippingService._();
 
@@ -8,10 +7,6 @@ class ShippingService {
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  /// Menugaskan kurir untuk sebuah transaksi.
-  ///
-  /// - Menambahkan dokumen ke koleksi `pengiriman`
-  /// - Mengatur flag `is_assigned` pada dokumen `transaksi`
   Future<void> assignCourier({
     required String transactionId,
     required String courierId,
@@ -37,8 +32,6 @@ class ShippingService {
   }
 
   /// Update status pengiriman oleh kurir (misalnya: Dalam Perjalanan, Selesai).
-  ///
-  /// Sesuai requirement: hanya menyimpan waktu & catatan.
   Future<void> updateDeliveryStatus({
     required String shippingId,
     required String statusPengiriman,

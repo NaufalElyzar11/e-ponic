@@ -54,7 +54,6 @@ class _FarmerHarvestScreenState extends State<FarmerHarvestScreen> {
           return const Center(child: Text('Belum ada tugas panen.'));
         }
 
-        // Ambil id_tanaman petani
         return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
           future: FirebaseFirestore.instance
               .collection('pengguna')
@@ -79,20 +78,16 @@ class _FarmerHarvestScreenState extends State<FarmerHarvestScreen> {
                 final m = item as Map<String, dynamic>;
                 if (m['id_tanaman'] != petaniPlantId) continue;
 
-                // --- PERBAIKAN DI SINI ---
                 final dt = (data['tanggal'] as Timestamp?)?.toDate();
-                final createdAt = (data['created_at'] as Timestamp?)?.toDate(); // Ambil created_at
+                final createdAt = (data['created_at'] as Timestamp?)?.toDate();
 
                 final dateStr = dt != null
                     ? DateFormat('dd MMM yyyy').format(dt)
                     : '';
                 
-                // Gunakan createdAt untuk menampilkan jam yang benar.
-                // Jika tidak ada, fallback ke jam dari tanggal, atau string kosong.
                 final timeStr = createdAt != null 
                     ? DateFormat('HH:mm').format(createdAt) 
                     : (dt != null ? DateFormat('HH:mm').format(dt) : '');
-                // -------------------------
 
                 list.add(
                   HarvestAssignmentModel(
@@ -160,7 +155,7 @@ class _FarmerHarvestScreenState extends State<FarmerHarvestScreen> {
                                       'updated_at': FieldValue.serverTimestamp(),
                                     });
                                 
-                                // Opsional: Tampilkan snackbar sukses
+                                // Tampilkan snackbar sukses
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(content: Text('Status panen berhasil diperbarui')),

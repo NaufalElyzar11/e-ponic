@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-
-// Tambahkan import package pdf & printing
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-
 import 'package:hydroponics_app/models/plant_model.dart';
 import 'package:hydroponics_app/models/plant_quantity_model.dart';
 import 'package:hydroponics_app/models/transaction_model.dart';
@@ -134,7 +131,6 @@ class _TransactionStatusScreenState extends State<TransactionStatusScreen> {
 
                       return TransactionStatusCard(
                         transaction: model,
-                        // Callback onPaymentStatusChanged DIHAPUS
                         onDelete: () {
                           if (model.id != null) {
                             _confirmDelete(context, model.id!);

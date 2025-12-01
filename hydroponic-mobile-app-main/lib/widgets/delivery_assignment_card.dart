@@ -28,7 +28,6 @@ class DeliveryAssignmentCard extends StatelessWidget{
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // PERBAIKAN DI SINI: Gunakan Expanded untuk nama customer
                   Expanded(
                     child: Text(
                       assignment.transaction.customerName,

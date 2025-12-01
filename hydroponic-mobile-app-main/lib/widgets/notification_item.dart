@@ -69,7 +69,8 @@ class NotificationItem extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: _getColorForType(notification.type)?.withOpacity(0.1),
+                // ignore: deprecated_member_use
+                color: _getColorForType(notification.type).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(

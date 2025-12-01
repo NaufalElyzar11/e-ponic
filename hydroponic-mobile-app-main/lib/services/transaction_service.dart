@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Service untuk mengelola transaksi, pelanggan, dan detail_transaksi.
 class TransactionService {
   TransactionService._();
 

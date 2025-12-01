@@ -104,8 +104,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       hintText: 'Masukkan nama pengguna',
                       prefixIcon: Icons.person,
                       inputFormatters: [
-                        // [REVISI] Hanya memperbolehkan huruf, spasi, dan titik (.)
-                        // Tanda dash (-) telah dihapus dari regex
                         FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s.]')),
                         LengthLimitingTextInputFormatter(30), // Batasi maksimal 30 karakter
                       ],
@@ -223,11 +221,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     StyledTextFormField(
                       controller: _passwordController,
                       labelText: 'Kata Sandi',
-                      hintText: '6-15 karakter, huruf & angka', // Hint disesuaikan
+                      hintText: '6-15 karakter, huruf & angka',
                       prefixIcon: Icons.lock_outline_rounded,
                       obscureText: !_isPasswordVisible,
                       inputFormatters: [
-                        // [REVISI] Batasi maksimal 15 karakter
                         LengthLimitingTextInputFormatter(15), 
                       ],
                       validator: (value) {
@@ -271,7 +268,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       prefixIcon: Icons.lock_outline_rounded,
                       obscureText: !_isConfirmPasswordVisible,
                       inputFormatters: [
-                        // [REVISI] Batasi maksimal 15 karakter juga untuk konfirmasi
                         LengthLimitingTextInputFormatter(15), 
                       ],
                       validator: (value) {

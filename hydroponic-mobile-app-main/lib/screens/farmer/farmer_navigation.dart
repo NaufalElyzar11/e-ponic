@@ -4,7 +4,7 @@ import 'package:hydroponics_app/screens/farmer/farmer_harvest_screen.dart';
 import 'package:hydroponics_app/screens/farmer/farmer_history_screen.dart';
 import 'package:hydroponics_app/screens/farmer/farmer_home_screen.dart';
 import 'package:hydroponics_app/screens/profile_screen.dart';
-import 'package:hydroponics_app/services/notification_service.dart'; // IMPORT PENTING
+import 'package:hydroponics_app/services/notification_service.dart';
 
 class FarmerNavigation extends StatefulWidget{
   const FarmerNavigation({super.key});

@@ -171,7 +171,7 @@ class _FarmerHomeContent extends StatelessWidget {
             if (stokSaatIni < 0) stokSaatIni = 0;
 
             bool isLoading = snapshotTanam.connectionState == ConnectionState.waiting || 
-                             snapshotPanen.connectionState == ConnectionState.waiting;
+                            snapshotPanen.connectionState == ConnectionState.waiting;
 
             // STREAM 3: Mengambil Data Tanaman (Interval & Masa Tanam)
             return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
@@ -275,6 +275,7 @@ class _FarmerHomeContent extends StatelessWidget {
                               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                             ),
                             if (isDateMissing)
+                              // ignore: dead_code
                               const Padding(
                                 padding: EdgeInsets.only(top: 8.0),
                                 child: Text(
@@ -325,7 +326,7 @@ class _FarmerHomeContent extends StatelessWidget {
                                   final intervalCek = getInterval('jadwal_pengecekan_tanaman');
                                   final intervalBersih = getInterval('jadwal_pembersihan_instalasi');
 
-                                  // --- REVISI: Gunakan Map agar ID unik (tidak double) ---
+                                  // Gunakan Map agar ID unik (tidak double)
                                   final Map<String, PlantMaintenanceModel> groupedSchedules = {};
                                   
                                   // Tanggal Hari Ini
@@ -372,7 +373,7 @@ class _FarmerHomeContent extends StatelessWidget {
                                       },
                                     );
 
-                                    // LOGIKA GROUPING: Prioritaskan yang SUDAH SELESAI
+                                    // Prioritaskan yang sudah selesai
                                     if (groupedSchedules.containsKey(title)) {
                                       final existing = groupedSchedules[title]!;
                                       // Jika existing belum selesai, tapi yang baru ini selesai -> Timpa
@@ -395,20 +396,18 @@ class _FarmerHomeContent extends StatelessWidget {
                                     final start = DateTime(tglTanam.year, tglTanam.month, tglTanam.day);
                                     final diff = today.difference(start).inDays;
 
-                                    // FIX LOGIKA JADWAL: HANYA JIKA DIFF > 0 (BUKAN HARI TANAM)
-                                    // DAN SESUAI INTERVAL
                                     bool isScheduleToday(int interval) {
                                       return interval > 0 && diff > 0 && (diff % interval == 0);
                                     }
 
                                     if (isScheduleToday(intervalAir)) {
-                                       addSchedule(field: 'jadwal_pengecekan_air_dan_nutrisi', title: 'Pengecekan Air & Nutrisi', description: 'Cek kualitas air dan tambah nutrisi bila diperlukan.', date: today, specificTanamId: thisDocId);
+                                      addSchedule(field: 'jadwal_pengecekan_air_dan_nutrisi', title: 'Pengecekan Air & Nutrisi', description: 'Cek kualitas air dan tambah nutrisi bila diperlukan.', date: today, specificTanamId: thisDocId);
                                     }
                                     if (isScheduleToday(intervalCek)) {
-                                       addSchedule(field: 'jadwal_pengecekan_tanaman', title: 'Pengecekan Tanaman', description: 'Periksa kondisi tanaman dan identifikasi hama/penyakit.', date: today, specificTanamId: thisDocId);
+                                      addSchedule(field: 'jadwal_pengecekan_tanaman', title: 'Pengecekan Tanaman', description: 'Periksa kondisi tanaman dan identifikasi hama/penyakit.', date: today, specificTanamId: thisDocId);
                                     }
                                     if (isScheduleToday(intervalBersih)) {
-                                       addSchedule(field: 'jadwal_pembersihan_instalasi', title: 'Pembersihan Instalasi', description: 'Bersihkan pipa dan instalasi hidroponik dari kotoran.', date: today, specificTanamId: thisDocId);
+                                      addSchedule(field: 'jadwal_pembersihan_instalasi', title: 'Pembersihan Instalasi', description: 'Bersihkan pipa dan instalasi hidroponik dari kotoran.', date: today, specificTanamId: thisDocId);
                                     }
 
                                     // Panen

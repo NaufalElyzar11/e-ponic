@@ -21,11 +21,9 @@ class LogisticAssignmentDetailScreen extends StatefulWidget {
       _LogisticAssignmentDetailScreenState();
 }
 
-class _LogisticAssignmentDetailScreenState
-    extends State<LogisticAssignmentDetailScreen> {
+class _LogisticAssignmentDetailScreenState extends State<LogisticAssignmentDetailScreen> {
   String? _selectedCourierId;
   
-  // 1. Definisikan variabel untuk menampung Stream & Future
   late Stream<QuerySnapshot<Map<String, dynamic>>> _courierStream;
   Future<DocumentSnapshot<Map<String, dynamic>>>? _transactionFuture;
   String? _transactionId;
@@ -33,7 +31,6 @@ class _LogisticAssignmentDetailScreenState
   @override
   void initState() {
     super.initState();
-    // 2. Inisialisasi Stream di sini (hanya sekali)
     _courierStream = FirebaseFirestore.instance
         .collection('pengguna')
         .where('posisi', isEqualTo: 'Kurir')
@@ -44,7 +41,6 @@ class _LogisticAssignmentDetailScreenState
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // 3. Inisialisasi Future di sini (karena butuh ModalRoute args)
     if (_transactionFuture == null) {
       final args = ModalRoute.of(context)?.settings.arguments as String?;
       if (args != null) {
@@ -87,9 +83,9 @@ class _LogisticAssignmentDetailScreenState
           child: SingleChildScrollView(
             child: Column(
               children: [
-                _buildAssignmentCard(), // Tidak perlu pass ID lagi
+                _buildAssignmentCard(),
                 const SizedBox(height: 20),
-                _buildAssignForm(), // Tidak perlu pass ID lagi
+                _buildAssignForm(),
               ],
             ),
           ),
@@ -97,7 +93,6 @@ class _LogisticAssignmentDetailScreenState
   }
 
   Widget _buildAssignmentCard() {
-    // 4. Gunakan variabel _transactionFuture
     return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       future: _transactionFuture,
       builder: (context, snapshot) {
@@ -169,7 +164,6 @@ class _LogisticAssignmentDetailScreenState
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
-        // 5. Gunakan variabel _courierStream
         StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: _courierStream,
           builder: (context, snapshot) {
@@ -207,9 +201,6 @@ class _LogisticAssignmentDetailScreenState
                   )
                   .toList(),
               onChanged: (value) {
-                // Saat setState dipanggil, build() jalan lagi
-                // Tapi karena kita pakai _courierStream yang sama,
-                // StreamBuilder TIDAK akan reset ke 'waiting'.
                 setState(() {
                   _selectedCourierId = value;
                 });
