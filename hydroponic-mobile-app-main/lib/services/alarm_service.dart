@@ -111,5 +111,6 @@ class AlarmService {
   /// Cancel semua alarm
   Future<void> cancelAllAlarms() async {
     await Alarm.stopAll();
+    print("⏰ Semua alarm berhasil dibatalkan.");
   }
 }

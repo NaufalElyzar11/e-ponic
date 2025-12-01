@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hydroponics_app/services/alarm_service.dart';
 
 import 'package:hydroponics_app/services/auth_service.dart';
 // Tambahkan import ini
@@ -146,11 +147,9 @@ class ProfileScreen extends StatelessWidget {
                 );
 
                 if (shouldLogout == true) {
-                  // --- PERBAIKAN: Stop Notifikasi Service ---
-                  // Matikan listener agar tidak ada memory leak atau notifikasi
-                  // yang salah alamat ke user berikutnya.
                   NotificationService.instance.stopListening();
-                  // ------------------------------------------
+                  
+                  await AlarmService.instance.cancelAllAlarms();
 
                   await AuthService.instance.signOut();
                   
